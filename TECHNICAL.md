@@ -67,10 +67,16 @@ derived files.
 
 - `match`: one row per game. Columns: `match_id`, `event_id`, `round`,
   `coach_a`, `coach_b`, `race_a`, `race_b`, `result` (W/D/L from side A's
-  perspective), `date`, source provenance. Side assignment (who is A) is
-  arbitrary; the model must be invariant to it (T5.6). Store each match
-  **once** — do not emit mirrored duplicate rows; duplication silently
-  doubles the effective sample size and breaks every uncertainty estimate.
+  perspective), `td_a`, `td_b`, `cas_a`, `cas_b` (nullable — carried from
+  day one if the source provides them, since margins would unlock the FR7
+  stretch goal early; the v1 model stays ordinal regardless),
+  `result_type` (normal / concession / forfeit / bye — byes are dropped
+  from modeling; concessions are kept as losses but flagged, with a
+  gate sensitivity check excluding them), `date`, source provenance. Side
+  assignment (who is A) is arbitrary; the model must be invariant to it
+  (T5.6). Store each match **once** — do not emit mirrored duplicate rows;
+  duplication silently doubles the effective sample size and breaks every
+  uncertainty estimate.
 - `event`: `event_id`, name, date, location/region, `pack_id`, event type
   (open/squad), coach count, source ids (NAF tournament id, Tourplay id).
 - `pack`: `pack_id`, name, schema version of its annotation, pointer to the
@@ -107,7 +113,12 @@ roster version in that span and no parameters for it. Never zero-fill.
   land it verbatim in `data/raw` first; write the normalizer against the raw
   artifact so ingestion is rerunnable. Expect messiness in tournament
   metadata (region, event type) — that's registry curation work, not parser
-  work.
+  work. The data request should explicitly ask for: per-match TD/CAS counts
+  (NAF has historically recorded them; see `match` columns above), coach
+  NAF numbers (not names only), tournament metadata, and whether historical
+  monthly Glicko snapshots exist — the FR8b lagged prior is contingent on
+  snapshots; if only current ratings exist, the prior is dropped (T5.3),
+  not approximated.
 - **Tourplay** (FR2): check ToS and rate limits **before** writing a scraper
   (§10). Milestone 1 needs only enough Tourplay access to assess ruleset
   availability; the full importer is milestone 3. Cache every response in
@@ -121,9 +132,13 @@ roster version in that span and no parameters for it. Never zero-fill.
 ### T4.1 Annotation unit (per §9a)
 
 Packs are annotated at the **pack** level: tier definitions (grants in
-normalized units), race→tier map, global rules (budget, games count,
-resurrection/progression, stacking bans, star/inducement policy, scoring
-system), plus the mandatory `other: <verbatim>` escape field. Per-race
+normalized units), race→tier map, **legal-race list** (the choice set — some
+packs ban or restrict races; the field model (FR9) and the race→tier
+coverage lint both need it, and it must be in schema v0 because retrofitting
+20 annotations is exactly the rework the guide exists to prevent), global
+rules (budget, games count, resurrection/progression, stacking bans,
+star/inducement policy, scoring system), plus the mandatory
+`other: <verbatim>` escape field. Per-race
 treatment vectors are **derived mechanically** in `packs.py` — annotators
 never author per-race vectors by hand (24+ races × 20 packs by hand is where
 transcription errors would live).
@@ -297,6 +312,40 @@ roster version.
   (FR8a). Gate it on data volume; ~25 races × sparse pairings will not
   identify it early, which is why v1 is descriptors-only.
 
+Descriptor authoring, QC, and iteration protocol — descriptors are a
+hand-authored input that directly shapes the matchup term and the FR8c
+flexibility interaction, so they get the same hygiene as pack annotations:
+
+- **Values**: hand-authoring by the owner plus an independent second pass
+  (LLM from roster sheets, or a second BB-literate human) with
+  reconciliation produces the **prior**, not the final word. Predictive
+  accuracy may then inform values through either of two sanctioned routes:
+  - *Preferred*: fit descriptor values as latent quantities inside the
+    model, with informative priors centered on the hand-authored values and
+    a tight scale (e.g. SD ≈ 0.1 on a 0–1 descriptor scale) — a standard
+    measurement-error treatment. Data pulls a value only where evidence is
+    strong; sparse cases shrink to the prior; posterior drift from hand
+    values is reported as a diagnostic of which intuitions the data
+    disputes.
+  - *Acceptable*: coarse manual iteration evaluated on the milestone-1
+    leave-*event*-out splits, with every configuration tried logged.
+  What stays out: free/unconstrained value fitting — that is a learned
+  embedding, which sparse race pairings cannot identify and which is the
+  milestone-4 low-rank residual's job. Note the identification asymmetry:
+  matchup-relevant values are informed by match-level data (plentiful),
+  but the flexibility value's FR8c role is identified at pack level
+  (N≈20) — expect the prior to dominate there and do not chase it.
+- **The descriptor set** (which columns, how defined) may be selected by
+  predictive performance, but only: from a pre-declared candidate pool,
+  evaluated on the milestone-1 leave-*event*-out splits (never the gate's
+  leave-pack-out folds), with every configuration tried logged.
+- **Freeze** before `eval/GATE.md` is committed — meaning the values (or,
+  under the latent treatment, the prior means and scales) are fixed;
+  changes after that are schema-v1 work. Iterating anything against the
+  gate's leave-pack-out folds is never sanctioned.
+- Sensitivity check at the gate: perturb descriptor values (or prior
+  scales) and confirm gate conclusions survive.
+
 ### T5.6 Invariance and correctness tests (write these first)
 
 Property-based tests, exact up to float tolerance:
@@ -345,6 +394,9 @@ U(coach n, race r) = a · loyalty(n, r)      # e.g. log(1 + prior events with r)
 - Fit on historical (coach, event, chosen race) rows. Only open events in
   the training set; squad events (EuroBowl) are excluded from fitting the
   individual-choice model (§5.1) and handled by the FR9c variant later.
+- The popularity feature has the same leakage exposure as Glicko: "recent
+  pick share" must be computed strictly from pre-event data via the same
+  as-of-join discipline as T5.3, and tested the same way.
 - Loyalty is expected to dominate — that is real (miniature ownership, per
   FR9) and not a modeling failure. Don't interpret the coefficient as pure
   preference in any output text.
@@ -408,10 +460,18 @@ assumption produced a number.
   sign checks (stunty × skill-grant generosity > 0; λ < 0 per T5.4).
 - **Pre-registration is a file**: `eval/GATE.md`, committed before the
   challenger is ever fit to annotated packs, containing the pass criteria
-  verbatim from §9a and the exact metric definitions. The gate report links
-  to the commit hash.
+  and the exact metric definitions. The gate report links to the commit
+  hash.
+- **Power rehearsal precedes pre-registration**: the simulation study
+  (T5.6.5) — data generated with known pack effects at realistic size —
+  estimates the gate's detection power under candidate criteria. The final
+  criteria (CI level, MAE margin) are set in light of that rehearsal, then
+  frozen in `eval/GATE.md` along with the estimated power. Deciding this
+  after seeing real-data results would make pre-registration theater; the
+  rehearsal is the one legitimate input to criteria choice.
 - Run order within milestone 2: stunty-vs-generosity scatter first (§9a
-  pre-test), then parameter recovery on simulation (T5.6.5), then the gate.
+  pre-test), then the power rehearsal, then commit `eval/GATE.md`, then the
+  gate.
 - Confound check (§8): report the coach×pack bipartite connectivity (PS7)
   and per-race switcher counts alongside the gate; sensitivity refit with
   non-switching coaches' race effects examined.
@@ -445,7 +505,15 @@ results. Review against this list before trusting any fitted model.
 12. Evaluating the fixed point / equilibrium only at the posterior mean —
     understates FR10 interval widths.
 13. Deciding gate pass/fail criteria after seeing results — the reason
-    `eval/GATE.md` exists.
+    `eval/GATE.md` exists (criteria may be informed by the simulation power
+    rehearsal, never by real-data results).
+14. Fitting descriptor values without informative priors (learned
+    embeddings by another name), or iterating descriptor values/sets on the
+    gate's leave-pack-out folds — see the protocol in T5.5. Data-informed
+    values are fine; unaccounted-for search against the gate's evaluation
+    is not.
+15. Computing field-model popularity features from data that includes the
+    event being predicted — same leakage class as #6.
 
 ## T9. Work breakdown
 
@@ -471,11 +539,11 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
 | W10 | Annotation guide (one page) + pack schema v0 + lints (T4.1) | W2 | A trial pack annotates in ≤60 min; lints catch seeded errors |
-| W11 | Pack selection: apply PS1–PS7; connectivity script for PS7 | W3 | ~20-pack list with per-criterion justification; owner approves |
+| W11 | Pack selection: apply PS1–PS7; connectivity script for PS7. PS4 applied as: prefer 60+ coaches, hard floor ~25–30 for regional-coverage (PS3) slots | W3 | ~20-pack list with per-criterion justification; owner approves |
 | W12 | Annotate packs; double-annotate 3–4 (LLM second pass w/ quoted evidence) | W10, W11 | All YAML validates; disagreement review written up |
 | W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; pack-global cancellation test (T5.6.3) passes |
-| W14 | Pre-register `eval/GATE.md` | W10 | Committed before W16 begins; criteria verbatim from §9a |
-| W15 | Stunty scatter pre-test; simulation-based power rehearsal (T5.6.5) | W13 | Both written up before the gate fit |
+| W14 | Pre-register `eval/GATE.md`; criteria finalized using W15's power rehearsal (T7) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
+| W15 | Stunty scatter pre-test; simulation-based power rehearsal (T5.6.5); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
 | W16 | Challenger model (race×treatment, FR8c cutpoints) + leave-pack-out CV + gate report | W9, W13, W14 | Gate verdict + confound/connectivity appendix (T7) |
 
 ### Milestone 3 — automated parsing (conditional on gate pass)
@@ -519,3 +587,8 @@ are listed; anything not listed as a dependency can proceed in parallel.
   authoring work, expected to be revised at schema v1 after the gate's
   residual analysis (§9a).
 - Web UI stack (FR13) — untouched until milestone-2 outputs exist.
+  **Warning for the notebook phase**: no persistent model-artifact/query
+  boundary exists yet, which is fine — but notebooks must only call `src/`
+  code, and fitted posteriors/fixed-point results must be serializable
+  artifacts on disk, not state living in a kernel. The eventual UI will
+  need exactly that boundary; don't let notebook-only state accrete.

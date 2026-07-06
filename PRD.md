@@ -141,9 +141,11 @@ and generalize to unseen packs.
 
 ### 7.3 Model
 - FR7: Ordinal W/D/L outcome model (draws are frequent; do not binarize).
-  TD/CAS margin modeling is a later-phase stretch goal — margins would
-  sharpen coach and matchup identification from thin data — but v1 outcome
-  data is W/D/L only.
+  TD/CAS margin modeling is a later-phase goal — margins would sharpen
+  coach and matchup identification from thin data. NAF match records may
+  include per-match TD/CAS counts (to be confirmed via the data request,
+  §10); ingestion carries these columns from day one where present, but the
+  v1 model remains ordinal W/D/L regardless.
 - FR8: Components: race baseline; matchup structure (descriptor-based first,
   optional learned low-rank residual later — see FR8a); coach rating fit
   from match history (see FR8b); coach×race familiarity; race ×
@@ -160,7 +162,11 @@ and generalize to unseen packs.
   rewritten between editions and some changed mid-era. The descriptor set is
   a small versioned schema alongside the treatment vector. A learned low-rank residual on top of the descriptor
   main effect is the planned upgrade path if data volume supports it
-  (milestone 4); the two compose rather than compete.
+  (milestone 4); the two compose rather than compete. Descriptor authoring
+  follows the same double-annotation discipline as pack annotation
+  (independent second pass, reconciliation); values may be data-informed
+  under informative priors centered on the hand-authored values — protocol
+  in TECHNICAL.md (T5.5), frozen before the milestone-2 gate.
 - FR8b: Coach strength — NAF publishes per-coach×race Glicko ratings
   (mu/phi, monthly rating periods, rank displayed as mu − 2.5·phi, inactive
   above phi 100, new-race mu seeded from the coach's other races). Not used
@@ -302,8 +308,11 @@ requirements any candidate list must satisfy:
   rather than relying on spread alone. Event type (open vs. squad) recorded
   per pack.
 - PS4 (data volume): each pack's event(s) must be linkable to NAF results;
-  prefer 60+ coaches per event. Pack-level N (~20) is the binding
-  statistical constraint, so no slot should be spent on tiny events.
+  prefer 60+ coaches per event, with a hard floor of ~25–30 coaches for
+  slots needed for regional coverage — PS3 takes precedence over PS4 where
+  they conflict, since within-region identification is the more
+  load-bearing requirement. Pack-level N (~20) is the binding statistical
+  constraint, so no slot should be spent on tiny events.
 - PS5 (annotatability): the pack document must be obtainable and complete
   (including errata); packs whose effective rules lived in forum threads
   only qualify if the record is recoverable.
@@ -318,9 +327,12 @@ requirements any candidate list must satisfy:
 
 ### Annotation unit and schema v0
 - Annotate **per pack**, not per race×pack: tier definitions (grants in
-  normalized units), race→tier map, global rules (budget, games count,
-  resurrection, stacking bans, star/inducement policy). Per-race treatment
-  vectors are derived mechanically from these. ~30–60 min per pack.
+  normalized units), race→tier map, legal-race list (the choice set — some
+  packs ban or restrict races; needed by the field model (FR9) and by
+  coverage lints, and must be in schema v0), global rules (budget, games
+  count, resurrection, stacking bans, star/inducement policy). Per-race
+  treatment vectors are derived mechanically from these. ~30–60 min per
+  pack.
 - Mandatory `other: <verbatim>` escape field per pack for rules the schema
   can't express — this is the primary input to schema v1.
 - Process: one-page annotation guide written first; packs as versioned YAML
@@ -333,7 +345,13 @@ requirements any candidate list must satisfy:
 - Evaluation: **leave-whole-pack-out** CV (matches the unseen-pack use case;
   random match splits leak pack identity).
 - Pass criteria fixed in advance, with magnitude — a bare "improves" would
-  let a lucky +0.001 log-loss delta pass. Rule: compute per-held-out-pack
+  let a lucky +0.001 log-loss delta pass. Final criteria (CI level,
+  margins) are set after a simulation-based power rehearsal — synthetic
+  data with known pack effects at realistic size (~20 packs) — and then
+  frozen before fitting to annotated packs; the rehearsal is the only
+  legitimate input to criteria choice, and estimated power is documented
+  alongside the frozen criteria. The values below are the working
+  defaults. Rule: compute per-held-out-pack
   paired log-loss differences (challenger − baseline); pass requires (a) the
   bootstrap 80% CI of the mean difference excludes zero, (b) per-race
   winrate MAE also improves, and (c) interaction coefficient signs are sane
@@ -361,9 +379,14 @@ requirements any candidate list must satisfy:
   structure.
 - Treatment-vector schema completeness: which rule levers matter enough to
   encode? (Resolved empirically at milestone 2.)
-- NAF data access: expected via NAF contacts (format TBD); match records are
-  uniform W/D/L. Tourplay likely requires scraping — check ToS and rate
-  limits before building the importer.
+- NAF data access: expected via NAF contacts (format TBD). The data request
+  should explicitly ask for: per-match TD/CAS counts (see FR7), coach NAF
+  numbers (not names only), tournament metadata, and whether historical
+  monthly Glicko snapshots exist. Contingency: if no snapshot history is
+  available, the FR8b Glicko prior is dropped in favor of pure hierarchical
+  pooling — never approximated with current ratings (leakage). Tourplay
+  likely requires scraping — check ToS and rate limits before building the
+  importer.
 - Tourplay↔NAF linkage: not needed for the core pipeline (NAF = results,
   Tourplay = rulesets, per §2). It resurfaces at milestone 4, where
   roster-level features require joining Tourplay rosters to NAF match
