@@ -173,11 +173,59 @@ Normalization decisions to fix once, in code:
 - Continuous features are standardized (z-scored over the annotated pack
   corpus) before entering the model; store the standardization constants
   with the fitted model so new-pack queries use the same scaling.
+- Effective gold budget is **not** a continuous linear feature — it has its
+  own monotone-discrete structure, specified in T4.3.
 - **Centering for identifiability**: the race baseline α_r absorbs any
   constant shift in that race's treatment across packs. Either center each
   race's treatment features over the pack corpus, or document that α_r means
   "baseline at corpus-average treatment for this race". Pick the first — it
   makes attribution outputs (FR11) read cleanly as deviations.
+
+### T4.3 Budget: monotone discrete effect (PRD §6)
+
+Budget effects are step-like (thresholds unlock roster configurations per
+race) and tournament TVs are quantized, so budget enters as a monotone
+discrete effect rather than a linear feature. Two stages sharing one
+structure.
+
+Gate stage (~20 packs):
+
+- **Grid**: the observed distinct TVs across the annotated corpus (in
+  practice ~50k quanta). Pool adjacent levels occupied by fewer than ~2
+  packs.
+- **Effect**: monotone step increments over the grid — scale × cumulative
+  simplex weights — with per-race deviations hierarchically shrunk toward
+  the global pattern. The race-specific *level* of any step function is
+  absorbed by α_r: parameterize increments only; do not add a per-race
+  budget intercept.
+- **Breakpoint tables**: hand-authored per-race thresholds
+  (`race_id × roster_version → TV thresholds + rationale`), computed from
+  deterministic roster math. Same QC and freeze discipline as descriptors
+  (T5.5): independent second pass, reconciliation, frozen before
+  `eval/GATE.md`. They enter twice: (a) informative priors for the
+  per-race step deviations; (b) the **query-time placement rule** — a
+  draft pack at an unobserved TV takes the enclosing interval's fitted
+  increment placed at the race's breakpoint within that interval
+  (piecewise-constant jump there), with proportional spread when the race
+  has no breakpoint in that interval. Never interpolate linearly between
+  grid points — that reintroduces the smooth-budget fiction this section
+  removes.
+- **Code contract**: the grid spec (cell edges + nesting map) is a
+  parameter of the design-matrix/η builder, like θ's index set (T5.3) —
+  the full-data upgrade below must be a configuration change, not a
+  rewrite.
+
+Full-data stage (W31; activated only when the milestone-3 corpus passes a
+TV-cell occupancy check):
+
+- Latent fine level: 10k cells nested in 50k parent buckets, monotone
+  throughout, children shrunk toward their parent's increment
+  (multi-resolution partial pooling). Where the corpus is dense the data
+  localizes steps at 10k; where sparse, the fine level collapses to the
+  coarse pattern.
+- Breakpoint tables demote to priors only (the placement rule is
+  superseded); posterior drift from the roster-math priors is reported as
+  a diagnostic — the analogue of T5.5's descriptor-drift report.
 
 ## T5. Match model (FR7, FR8, FR8a–c)
 
@@ -238,6 +286,11 @@ happen:
   γ_r ~ N(γ̄, Σ_γ), non-centered. γ̄ is the "generic race" response (e.g.
   "more skills helps everyone"); the per-race deviations are what the thesis
   gate is really testing.
+- **Budget enters through the monotone-discrete structure of T4.3**, not as
+  a linear z column. It still lives inside s(side) and enters η as a
+  difference, so side-swap invariance is unaffected; its per-race
+  deviations belong to the challenger's race×treatment block like any
+  other treatment response.
 - **Mirror matches** (r_A = r_B): race and treatment terms cancel and the
   matchup term is exactly zero. Keep these matches — they are pure signal
   for coach abilities and cutpoints. Dropping them biases coach estimates
@@ -247,7 +300,13 @@ happen:
 
 - v1: static latent θ_i ~ N(μ_i, σ_θ), non-centered, with σ_θ hierarchical.
 - Optional prior mean from NAF Glicko: μ_i = δ · standardized(mu_i as of the
-  match's tournament start). **Leakage rule**: any Glicko value used for a
+  match's tournament start). NAF mu is per coach×race: standardize **within
+  race × rating period** (the coach's standing relative to other coaches of
+  that race), so race strength does not re-enter the coach prior — raw mu
+  for the race being played would re-import exactly the race effect FR8b
+  declines to double-count. Use the within-race-standardized mu for the race
+  being played; if the coach is unrated there, their mean standardized mu
+  across rated races; otherwise μ_i = 0. **Leakage rule**: any Glicko value used for a
   match must be computed from ratings published strictly before that
   tournament. If snapshot history isn't available, set μ_i = 0 and rely on
   pooling — do not substitute current ratings "just for initialization";
@@ -354,10 +413,14 @@ Property-based tests, exact up to float tolerance:
    and relabeling W↔L leaves the likelihood of the dataset unchanged.
 2. **Mirror neutrality**: equal coaches, same race, same pack ⇒
    P(W) = P(L) exactly, for any parameter draw.
-3. **Pack-global cancellation**: adding a constant to every race's treatment
-   vector within a pack leaves all match probabilities unchanged (given the
-   centering convention of T4.2, this is a regression test on the design
-   matrix builder).
+3. **Per-race centering invariance**: adding a constant to one race's
+   treatment feature across every pack in the corpus leaves all match
+   probabilities unchanged after re-derivation — the T4.2 centering absorbs
+   it into α_r (a regression test on the design matrix builder). The
+   transposed statement is **not** an invariant and must not be tested for:
+   shifting every race's treatment within one pack legitimately changes
+   predictions, because race-specific γ_r responses are the thesis — a pack
+   granting everyone more skills helps some races more.
 4. **No-leakage**: the experience feature and Glicko prior for a match
    depend only on strictly earlier data (test with a synthetic timeline).
 5. **Parameter recovery**: simulate data from known parameters at realistic
@@ -394,8 +457,9 @@ U(coach n, race r) = a · loyalty(n, r)      # e.g. log(1 + prior events with r)
 - Fit on historical (coach, event, chosen race) rows. Only open events in
   the training set; squad events (EuroBowl) are excluded from fitting the
   individual-choice model (§5.1) and handled by the FR9c variant later.
-- The popularity feature has the same leakage exposure as Glicko: "recent
-  pick share" must be computed strictly from pre-event data via the same
+- The popularity **and loyalty** features have the same leakage exposure as
+  Glicko: "recent pick share", "prior events with r", and the last-race
+  indicator must all be computed strictly from pre-event data via the same
   as-of-join discipline as T5.3, and tested the same way.
 - Loyalty is expected to dominate — that is real (miniature ownership, per
   FR9) and not a modeling failure. Don't interpret the coefficient as pure
@@ -408,9 +472,14 @@ U(coach n, race r) = a · loyalty(n, r)      # e.g. log(1 + prior events with r)
 
 ```
 field⁰   = choice model with fav = isolated race strength
-fav^k_r  = Σ_o field^k_o · E[winrate r vs o | pack]     # from the match model, neutral coaches
+fav^k_r  = Σ_o field^k_o · E[points r vs o | pack]      # from the match model, neutral coaches
 field^k+1 = (1 − ρ) · field^k + ρ · choice(fav^k)       # damped update, ρ ≈ 0.5
 ```
+
+`E[points]` is expected per-game tournament points under the pack's scoring
+system (the pack's win/draw points weighted by the match model's W/D/L
+probabilities), per FR9a — coaches optimize points, not winrate, and draws
+are frequent.
 
 Iterate to tolerance; expected 1–2 effective rounds because loyalty damps
 best-response (PRD §4). Always cap iterations and log the trajectory —
@@ -457,21 +526,39 @@ assumption produced a number.
   pack paired log-loss differences (challenger − baseline), bootstrap over
   packs (resample packs, not matches — packs are the exchangeable unit),
   80% CI excluding zero; plus winrate-MAE improvement; plus the coefficient
-  sign checks (stunty × skill-grant generosity > 0; λ < 0 per T5.4).
+  sign checks, operationalized as posterior probabilities with thresholds
+  fixed in `eval/GATE.md` (stunty × skill-grant generosity > 0; λ < 0 per
+  T5.4 — the λ check is binding only if the power rehearsal shows it is
+  identified at pack-level N, else advisory, per §9a).
+- Known-case anchors (§9a): each anchor compiles to a signed delta —
+  challenger minus baseline predicted performance for the named race,
+  averaged over held-out packs meeting the anchor's treatment condition —
+  reported as a table in the gate report. Advisory, not binding.
+- Training corpus: baseline and challenger must be fit on the same corpus
+  for the paired comparison to isolate the pack×race terms — the
+  milestone-1 full-corpus baseline is a yardstick only, never the gate
+  comparator. Annotated-only vs. full-corpus-with-imputation is an open
+  decision (§10 in the PRD, T10 here), made before `eval/GATE.md`.
 - **Pre-registration is a file**: `eval/GATE.md`, committed before the
-  challenger is ever fit to annotated packs, containing the pass criteria
-  and the exact metric definitions. The gate report links to the commit
+  challenger is ever fit to annotated packs, containing the pass criteria,
+  the exact metric definitions, the training-corpus decision, and the
+  known-case anchor list (§9a). The gate report links to the commit
   hash.
 - **Power rehearsal precedes pre-registration**: the simulation study
   (T5.6.5) — data generated with known pack effects at realistic size —
-  estimates the gate's detection power under candidate criteria. The final
+  estimates the gate's detection power under candidate criteria. The
+  simulated generative process includes the monotone budget structure
+  (T4.3), including a correlated-levers scenario (budget correlated with
+  other generosity features) — a flexible shape can absorb confounded
+  signal, and the rehearsal is where that shows up. The final
   criteria (CI level, MAE margin) are set in light of that rehearsal, then
   frozen in `eval/GATE.md` along with the estimated power. Deciding this
   after seeing real-data results would make pre-registration theater; the
   rehearsal is the one legitimate input to criteria choice.
-- Run order within milestone 2: stunty-vs-generosity scatter first (§9a
-  pre-test), then the power rehearsal, then commit `eval/GATE.md`, then the
-  gate.
+- Run order within milestone 2: known-case anchors drafted, then the
+  exploratory correlation pass (§9a — per-race winrate vs. treatment
+  features, stunty scatter as headline), then the power rehearsal, then
+  commit `eval/GATE.md`, then the gate.
 - Confound check (§8): report the coach×pack bipartite connectivity (PS7)
   and per-race switcher counts alongside the gate; sensitivity refit with
   non-switching coaches' race effects examined.
@@ -512,8 +599,11 @@ results. Review against this list before trusting any fitted model.
     gate's leave-pack-out folds — see the protocol in T5.5. Data-informed
     values are fine; unaccounted-for search against the gate's evaluation
     is not.
-15. Computing field-model popularity features from data that includes the
-    event being predicted — same leakage class as #6.
+15. Computing field-model popularity or loyalty features from data that
+    includes the event being predicted — same leakage class as #6.
+16. Treating budget as a linear feature, interpolating linearly between
+    budget grid points at query time, or fitting free (non-monotone,
+    unpooled) per-race breakpoints — the sanctioned structure is T4.3.
 
 ## T9. Work breakdown
 
@@ -529,7 +619,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | W3 | NAF ingestion → raw artifacts + tidy `match`/`event`/`coach` tables | W1, W2, NAF data access | Quarantine report < agreed threshold; row counts reconciled against source |
 | W4 | Tourplay reconnaissance: ToS/rate-limit check, ruleset availability survey | W1 | Written go/no-go note on scraping; sample rulesets cached |
 | W5 | Volume report → FR3 decision (BB2025-only vs. pooling) | W3 | Owner signs the decision; recorded in PRD or a decision log |
-| W6 | Descriptor schema v0 + hand-authored descriptor tables (FR8a) | W2 | YAML validates; one-page rationale per descriptor |
+| W6 | Descriptor schema v0 + hand-authored descriptor tables (FR8a); per-race budget breakpoint tables (T4.3) | W2 | YAML validates; one-page rationale per descriptor; breakpoint thresholds carry roster-math rationale |
 | W7 | Match model core: likelihood, η builder, invariance tests of T5.6 (1–4) | W2 | Property tests pass; parameter recovery on toy data |
 | W8 | Baseline model fit (coach + race[roster_version] + descriptor matchup) | W3, W6, W7 | Convergence gates pass on full data |
 | W9 | Eval harness with leave-event-out policy; baseline yardstick report | W8 | Yardstick metrics published in a report notebook |
@@ -539,11 +629,11 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
 | W10 | Annotation guide (one page) + pack schema v0 + lints (T4.1) | W2 | A trial pack annotates in ≤60 min; lints catch seeded errors |
-| W11 | Pack selection: apply PS1–PS7; connectivity script for PS7. PS4 applied as: prefer 60+ coaches, hard floor ~25–30 for regional-coverage (PS3) slots | W3 | ~20-pack list with per-criterion justification; owner approves |
+| W11 | Pack selection: apply PS1–PS7; connectivity script for PS7; TV-spread check (PS1/T4.3 — the budget grid is identified only where packs differ). PS4 applied as: prefer 60+ coaches, hard floor ~25–30 for regional-coverage (PS3) slots | W3 | ~20-pack list with per-criterion justification incl. TV spread; owner approves |
 | W12 | Annotate packs; double-annotate 3–4 (LLM second pass w/ quoted evidence) | W10, W11 | All YAML validates; disagreement review written up |
-| W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; pack-global cancellation test (T5.6.3) passes |
-| W14 | Pre-register `eval/GATE.md`; criteria finalized using W15's power rehearsal (T7) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
-| W15 | Stunty scatter pre-test; simulation-based power rehearsal (T5.6.5); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
+| W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; centering-invariance test (T5.6.3) passes |
+| W14 | Pre-register `eval/GATE.md`: criteria finalized using W15's power rehearsal, training-corpus decision, known-case anchor list (T7, §9a) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
+| W15 | Exploratory correlation pass (§9a; stunty scatter headline); simulation-based power rehearsal (T5.6.5); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
 | W16 | Challenger model (race×treatment, FR8c cutpoints) + leave-pack-out CV + gate report | W9, W13, W14 | Gate verdict + confound/connectivity appendix (T7) |
 
 ### Milestone 3 — automated parsing (conditional on gate pass)
@@ -574,6 +664,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | W28 | Swiss-pairing simulator for FR10 | W21 | Forecasts labeled with pairing assumption; delta vs. random-pairing reported |
 | W29 | Time-varying coach ability + gate-conclusion sensitivity check (FR8b) | W16 | Gate verdict re-checked under upgraded coach term |
 | W30 | TD/CAS margin model (FR7 stretch) | data with margins | Only if margin data materializes |
+| W31 | Latent fine-resolution budget hierarchy (10k-within-50k, T4.3) | W16, W17 | Activated only if the TV-cell occupancy check passes; posterior drift vs. breakpoint priors reported |
 
 ## T10. Open technical decisions (deliberately deferred)
 
@@ -583,6 +674,10 @@ are listed; anything not listed as a dependency can proceed in parallel.
 - Whether BB2020 pooling is invoked and its exact era-adjustment structure —
   decided at W5 per FR3; the roster-version keying (T3.2) is designed so
   either answer slots in without schema change.
+- Gate training corpus — matched annotated-only corpora vs. full corpus
+  with treatment terms active only where annotated (PRD §10). Decided at
+  W14, before `eval/GATE.md`; the power rehearsal (W15) simulates whichever
+  is chosen.
 - Exact descriptor list and scoring-incentive feature definition — W6/W10
   authoring work, expected to be revised at schema v1 after the gate's
   residual analysis (§9a).

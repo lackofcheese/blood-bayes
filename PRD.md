@@ -98,7 +98,21 @@ tournaments the model will mostly be queried on.
 Rulepacks are normalized into a **per-race treatment vector**: the concrete
 resources a pack grants each race. Candidate features:
 
-- effective gold budget
+- effective gold budget — not a continuous linear feature: budget effects
+  are step-like (crossing a threshold unlocks a roster configuration for a
+  specific race — the Elven Union anchor in §9a is the motivating case),
+  and tournament TVs are quantized in practice, so budget enters as a
+  monotone discrete effect. Gate stage (~20 packs): monotone step
+  increments over the observed distinct TVs, with per-race deviations
+  hierarchically shrunk toward the global pattern; hand-authored per-race
+  breakpoint tables (deterministic roster math) serve both as priors for
+  the per-race steps and as the query-time rule for placing a step within
+  a coarse interval when evaluating a draft pack at an unobserved TV.
+  Full-data stage (post-milestone-3 corpus): the fine level becomes
+  latent — 10k cells nested in 50k buckets, monotone, children shrunk
+  toward parents — gated on TV-cell occupancy, with posterior drift from
+  the roster-math priors reported as a diagnostic (milestone 4).
+  Specification in TECHNICAL.md T4.3.
 - number of primary / secondary skills grantable
 - skill stacking limits (incl. specific bans, e.g. Claw + Mighty Blow)
 - star player access
@@ -205,8 +219,11 @@ and generalize to unseen packs.
   de-prioritized; primary use assumes a known or historical coach pool
   (e.g. last edition's attendees).
 - FR9a (refinement): favorability input to FR9 is field-conditional —
-  matchup-weighted expected winrate vs. the currently projected field, not
-  isolated race strength — solved by fixed-point iteration (project field →
+  matchup-weighted expected per-game tournament points under the pack's
+  scoring system vs. the currently projected field, not isolated race
+  strength. (Points, not raw winrate: draws are frequent and packs weight
+  them differently; the W/D/L model plus the annotated scoring rules give
+  expected points directly.) Solved by fixed-point iteration (project field →
   recompute favorability → update picks; expected to converge in 1–2 rounds).
   Captures counter-picking (e.g. Humans rising in elf-heavy metas).
 - FR9b (refinement): meta-pressure features — low-dimensional summaries of the
@@ -283,7 +300,9 @@ and generalize to unseen packs.
    favorability? gates FR9a. Then: roster-level features from Tourplay
    rosters (requires Tourplay↔NAF coach linkage — see §10); squad-event
    field model validated against EuroBowl (FR9c); learned low-rank matchup
-   embeddings if data volume supports them (FR8a); Swiss-pairing simulation
+   embeddings if data volume supports them (FR8a); latent fine-resolution
+   budget hierarchy (§6), gated on corpus TV-cell occupancy once the
+   milestone-3 corpus exists; Swiss-pairing simulation
    for aggregate forecasts (FR10); time-varying coach skill (FR8b); TD/CAS
    margin outcome modeling (FR7 stretch goal).
 
@@ -296,8 +315,9 @@ requirements any candidate list must satisfy:
 
 - PS1 (identifiability): the set must span the treatment levers — at minimum
   include flat/untiered, steep stunty-compensation, stack-permissive, and
-  star-heavy packs. A set of near-identical packs makes pack×race terms
-  unidentifiable regardless of match count.
+  star-heavy packs, and span TV levels (the budget grid of §6 is identified
+  only where packs differ). A set of near-identical packs makes pack×race
+  terms unidentifiable regardless of match count.
 - PS2 (natural experiments): include at least 2–3 same-event-across-years
   pairs where the pack changed between editions — field culture held
   constant, rules varied.
@@ -357,12 +377,63 @@ requirements any candidate list must satisfy:
   winrate MAE also improves, and (c) interaction coefficient signs are sane
   (e.g. stunty performance rises with skill-grant generosity; under
   win-rewarding scoring, high-flexibility races shift probability mass from
-  D to both W and L — the FR8c signature). With N≈20
-  packs this is deliberately a lenient-but-nonzero bar; the point is fixing
-  it before fitting so a marginal result can't be argued past.
-- Cheap pre-test to run first: stunty winrate vs. skill-grant generosity
-  across packs (single scatter). Stunty treatment varies most across packs;
-  if the thesis holds anywhere it is visible there.
+  D to both W and L — the FR8c signature). Sign checks are operationalized
+  as posterior-probability thresholds fixed in `eval/GATE.md` (e.g.
+  P(correct sign) ≥ 0.9), not posterior-mean signs. The FR8c λ check is
+  binding only if the power rehearsal shows λ is identified at N≈20 packs —
+  T5.5 expects the prior to dominate there — otherwise it is reported as
+  advisory and the binding sign check is stunty × generosity alone. With
+  N≈20 packs this is deliberately a lenient-but-nonzero bar; the point is
+  fixing it before fitting so a marginal result can't be argued past.
+- Cheap exploratory pass to run first: rough correlations of per-race
+  winrate against treatment features across the annotated packs, headlined
+  by the stunty winrate vs. skill-grant generosity scatter (stunty
+  treatment varies most across packs; if the thesis holds anywhere it is
+  visible there). This is a sanity check and schema-v1 input, not evidence —
+  with ~20 packs the correlations are noisy and confounded by region and
+  field strength. Discipline: the pass is written up and committed; gate
+  pass criteria still come only from the power rehearsal; known-case
+  anchors drafted before the pass keep their expert-judgement status, and
+  any anchor added or changed afterward is labeled data-suggested.
+
+### Known-case anchors (expert judgement)
+
+A short list of race × pack-treatment expectations, fixed from expert
+judgement before fitting and frozen in `eval/GATE.md` alongside the
+quantitative criteria. Each anchor is a directional statement: the
+challenger should move the held-out prediction for the named race in the
+stated direction, relative to the baseline, on packs with the stated
+treatment. Anchors are advisory diagnostics reported with the gate, not
+binding pass criteria — the binding bar stays quantitative (above).
+
+Two roles: (a) face validity — a challenger that clears the quantitative
+bar while moving known cases the wrong way is suspect; (b) diagnosing the
+gate training-corpus choice (§10): a baseline fit on the broad corpus pulls
+pack-sensitive races toward their broad-data average, and the anchors are
+exactly where that distortion shows.
+
+Confirmed anchor:
+
+- Elven Union: weak in broad pooled data, strong under packs with specific
+  enabling features — e.g. skill-stacking allowances or gold-budget
+  breakpoints that unlock key roster configurations — rather than under
+  generic generosity. The canonical pack-sensitive race; pinning down the
+  exact features is deferred to anchor authoring at the GATE.md freeze.
+
+Candidate anchors (owner to confirm or strike before the GATE.md freeze):
+
+- Stunty races rise with steep compensation (overlaps the pre-test above).
+- Dwarf gains less than the generic response from skill-grant generosity
+  (skill-dense starting roster; diminishing returns).
+- Claw + Mighty Blow stacking bans depress armour-breaking bash lists
+  (Chaos Chosen, Nurgle).
+- Discounted Master Chef lifts Halflings.
+- Broad star-player access lifts low-tier races more than high-tier.
+
+Pack selection must exercise the anchor conditions — this list doubles as
+a concrete checklist for PS1's lever-spanning requirement (generous vs.
+stingy skill budgets, stacking bans, chef discount, and star access must
+all vary within the corpus).
 
 ### Interpreting a null
 - N=20 packs is the binding constraint (not match count); a null is
@@ -391,6 +462,17 @@ requirements any candidate list must satisfy:
   Tourplay = rulesets, per §2). It resurfaces at milestone 4, where
   roster-level features require joining Tourplay rosters to NAF match
   records per coach; most Tourplay accounts carry a usable join key.
+- Gate training corpus: the challenger can only be fit on matches whose
+  pack is annotated, so the gate comparison must decide between (a) fitting
+  baseline and challenger both on the ~20 annotated packs' matches (clean
+  pairing, weaker coach identification than the full corpus) or (b) fitting
+  both on the full corpus with treatment terms active only where annotated
+  (needs an imputation convention for unannotated packs). Either way the
+  two models must share a corpus — comparing an all-data baseline against
+  an annotated-only challenger would confound the pack×race delta. Decided
+  before `eval/GATE.md` is committed; the power rehearsal must simulate the
+  chosen corpus, and the known-case anchors (§9a) are the sensitivity
+  diagnostic.
 - Matchup sparsity: rare race pairs may not support even low-rank structure;
   fall back to descriptor-based interactions.
 - Coach rating cold-start for new coaches (mitigation: hierarchical prior;
