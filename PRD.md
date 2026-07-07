@@ -129,7 +129,7 @@ and generalize to unseen packs.
 ### 7.1 Data ingestion
 - FR1: Ingest NAF match records (coach, race, tournament, result) into a
   match-level table.
-- FR2: Ingest Tourplay tournament results and structured ruleset data.
+- FR2: Ingest structured ruleset data from TourPlay.
 - FR3: **BB2025-only is the primary plan; BB2020 pooling is the fallback** if
   BB2025 volume proves insufficient — decided with actual match counts at
   milestone 1. If pooling is needed: the 2020→2025 change is per-race
