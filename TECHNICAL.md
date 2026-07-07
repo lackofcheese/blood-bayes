@@ -402,6 +402,12 @@ roster version.
   for intransitive games) **on top of** the descriptor term — they compose
   (FR8a). Gate it on data volume; ~25 races × sparse pairings will not
   identify it early, which is why v1 is descriptors-only.
+- M is pack-invariant in v1. A registered extension makes it
+  pack-dependent — M(p) = M0 + Σ_j u_{p,j}·ΔM_j, e.g. stacking
+  permissiveness twisting the bash-vs-dodge cells — capturing matchup
+  effects of pack levers beyond the field-average that γ already carries.
+  Design sketch, the γ-centering requirement, and revival conditions:
+  M11.1. Do not add ΔM terms ad hoc.
 
 Descriptor authoring, QC, and iteration protocol — descriptors are a
 hand-authored input that directly shapes the matchup term and the FR8c
@@ -594,9 +600,11 @@ assumption produced a number.
 - Confound check (§8): report the coach×pack bipartite connectivity (PS7)
   and per-race switcher counts alongside the gate; sensitivity refit with
   non-switching coaches' race effects examined. The residual analysis also
-  carries the advisory opponent-experience probe (M8): residuals in
-  matches against high-gimmick races vs. the opponent's prior exposure
-  count — no refit, gates the M11 deferred term.
+  carries the advisory deferred-feature probes (M8, M11) — no refits, each
+  gates its register entry: opponent-experience (residuals vs. opponent's
+  prior exposure, matches against high-gimmick races), coach-style
+  (per-coach residuals vs. opponent descriptors, high-volume coaches
+  only), and pack-dependent matchup misses (M11.1).
 
 ## T8. Known failure modes (checklist for implementers)
 

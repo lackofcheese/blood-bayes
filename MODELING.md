@@ -237,6 +237,14 @@ have free baselines, so a w·(x_A − x_B) term is a reparameterization of
 nothing, and fitting both just makes two posteriors fight (T8.5). The
 matchup term carries only what α cannot: interactions.
 
+**Pack-invariance of M is a v1 simplification.** In reality the matchup
+geometry itself is pack-dependent: rule levers reshape specific pairings
+through the builds they enable — skill stacking produces Tackle/Mighty
+Blow stacks whose EV concentrates against dodge-reliant, low-armour
+opponents. v1's γ carries the field-average of such effects; the
+matchup-specific remainder is a registered extension with a design
+sketch in M11.1.
+
 ## M8. Coach terms, and the deferred opponent-experience variant
 
 **Why a jointly-fit latent, not NAF Glicko as a covariate.** FR8b's three
@@ -347,7 +355,69 @@ stated condition.
 | Opponent-race experience: ψ₂·log(1 + coach's prior games *against* r_opp), likely interacted with a gimmickiness descriptor | Gimmick races (Vampires, Slann, stunties) tax opponent knowledge; the edge decays with exposure | Near-collinear with θ and α under proportional exposure; needs an extra descriptor or per-race ψ₂ to have teeth (M8) | The M8 residual probe (run with milestone-2 residual analysis) shows exposure-correlated residuals vs gimmick races |
 | Coach×matchup experience (games playing r_A vs r_B) | As above, plus own-race-specific counterplay knowledge | Strictly sparser than the vs-race version (~600 ordered pairs per coach) | vs-race term adopted and materially improving, with structured residual remaining |
 | Flexibility-difference scoring term in η: λ₂·s_p·(flex_A − flex_B) | Uneven draw agency — the side that can manufacture a late chance converts close games directionally (M6) | Identified only via cross-pack s_p variation (N≈20, same weakness as λ); theoretical sign not certain | Corpus growth past milestone 3 *and* the power rehearsal showing pack-level scoring terms identified |
+| Pack-modulated matchups M(p) — design sketch in M11.1 | Pack levers reshape specific matchups through the builds they enable (stacking → Tackle/Mighty Blow stacks preying on dodge-reliant teams) | v1's γ already carries the field-average of the effect; the matchup-specific remainder needs within-pack contrasts ~20 packs can't spare, and must be centered against γ to be separable (M11.1) | Build-response study (W23) passes + milestone-3 corpus, alongside W27; earlier if gate residuals show pack-dependent matchup misses |
+| Coach-style descriptors × opponent descriptors (labeled or latent) | Coaches have persistent playstyles and style-specific weaknesses (e.g. struggles against fast agile teams) | No labeling source at corpus scale; the latent version is a per-coach embedding — data is thin for all but the most active coaches, and shrinkage would zero it exactly where it can't be checked | Residual probe on high-volume coaches (per-coach baseline residuals vs. opponent descriptor vector) shows heterogeneous structure |
+| Coach×coach terms | Style or psychological matchups between specific coach pairs | Hopeless sparsity — most coach pairs ever meet a handful of times; any real signal is better routed through coach-style descriptors (row above) | None as a direct term; subsumed by the coach-style row |
+| Standings-conditional incentives | Late-round standings shape per-match W/D incentives (a draw can lock a placing); the symmetric part is a c effect, any one-sided need-to-win an η effect (M4) | Needs per-round standings reconstruction; largely washes out of the race-level aggregates this project targets | Swiss-pairing simulator work (W28), where round-level realism starts to matter |
 
 Anything added here should state mechanism, deferral reason, and revival
 condition in the same shape — the register only works if a null result
 can retire an idea as cheaply as a positive one revives it.
+
+### M11.1 Pack-modulated matchups: design sketch
+
+The register entry judged most likely to matter, so it gets more than a
+table row.
+
+**What v1 already captures.** Levers like stacking permissiveness are
+mostly pack-global, so z_{p,r} carries them for every race, and the
+response difference (γ_A − γ_B)·z is identified from shared-environment
+variation. This means γ_r reads as *response to the environment*, not
+merely response to the race's own grants — "Amazons suffer in
+stack-permissive packs" is a v1 challenger effect, not a missing one.
+What γ encodes is the field-averaged consequence: how the environment
+moved a race's results against the mix of opponents it actually met in
+the training data.
+
+**What is missing.** The mechanism is matchup-specific: a Tackle/Mighty
+Blow stack extracts its EV from dodge-reliant, low-armour opponents and
+far less from, say, Khemri. Averaging that into γ has two costs. (a)
+Forecasts against non-average fields misweight it — an elf-heavy
+projected field under a stack-permissive pack should hurt Amazons more
+than the training-average effect says (FR10). (b) The counter-pick and
+equilibrium machinery (FR9a, FR12) runs on the matchup matrix
+E[points r vs o | pack] — today a pack moves that matrix only through
+per-race strength, when in reality it also *twists* it.
+
+**Parameterization.** Make the matchup matrix pack-dependent:
+
+```
+m(A, B; p) = x_A′ M(p) x_B,    M(p) = M0 + Σ_j u_{p,j} · ΔM_j
+```
+
+with u_{p,j} a small set of pre-declared pack-level scalars (stacking
+permissiveness first) and each ΔM_j skew-symmetric — which makes every
+invariance property (antisymmetry, mirror-zero, side-swap) inherited
+automatically. Two variants: hand-declared sparse cells (only the
+mechanism-known entries, e.g. u_stack on the bash-beats-dodge cell — a
+handful of scalars with shrinkage), or full ΔM_j matrices under tight
+shrinkage (milestone-4 volume).
+
+**Identification, and the centering trap.** The term varies at match
+level through the descriptors, so it is better identified than
+pack-global cutpoint terms like λ — but its field-average,
+u_{p,j} · x_A′ ΔM_j x̄_field, is a race×u_j main effect: exactly γ-shaped.
+Fitted naively, ΔM_j and γ fight over the same signal — the same failure
+mode T5.5 avoids by keeping descriptor main effects out of M. The fix is
+the same discipline applied once more: center the modulation so γ keeps
+the field-average and ΔM_j carries only the deviation around it.
+
+**The mediator becomes observable later.** The causal path is
+pack → builds (Tackle/MB density) → matchup EV. The build-response study
+(W23) tests the first arrow; Tourplay roster features (W26) would expose
+the mediator directly — and observed skill counts entering the matchup
+term likely beat inferring latent modulation. Hence the revival
+condition: after a W23 pass, alongside W27, sparse hand-declared cells
+first. FR9b's meta-pressure features are the complementary conditioning
+of the same mediator (field → builds rather than pack → builds); if both
+are ever active they should share the build-feature definitions.
