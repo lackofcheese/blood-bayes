@@ -1,8 +1,10 @@
 # Technical design: bb-stats
 
 Status: draft · Companion to PRD.md (PRD is the source of truth for *what*;
-this document specifies *how*). Section references (§, FR, PS) point into the
-PRD unless prefixed with T (this document).
+this document specifies *how*). The reasoning behind the modeling choices —
+why these structures fit the game and the data — lives in MODELING.md.
+Section references (§, FR, PS) point into the PRD, M into MODELING.md,
+T into this document.
 
 Audience: anyone (human or model) implementing the PRD. The purpose is to
 capture design decisions, model specification details, and known failure
@@ -233,7 +235,18 @@ This section is the heart of the document. The model is an ordinal
 (W/D/L) regression with an **antisymmetric** linear predictor and
 **symmetric** cutpoints. Getting the symmetry structure right is not
 optional polish — it is what makes the model coherent under side-swapping
-and what prevents several silent double-counting bugs.
+and what prevents several silent double-counting bugs. Why this form (and
+why it is fully general, not a restriction): MODELING.md M2–M4.
+
+Notation (authoritative table with rationale: M1): σ is the logistic
+function 1/(1+e^(−x)); η the antisymmetric advantage of side A; c > 0 the
+draw half-width (cutpoints ±c); θ_i latent coach ability; α_{r,v} the
+baseline of race r at roster version v; z_{p,r} the derived treatment
+vector of pack p for race r; γ_r race r's treatment-response coefficients;
+f the coach×race familiarity curve; m(r_A, r_B) = x_A′ M x_B the matchup
+term over race descriptor vectors x_r with skew-symmetric M; c0, κ, λ the
+cutpoint parameters; s_p the pack's scoring-incentive scalar; flex_r the
+strategic-flexibility descriptor.
 
 ### T5.1 Likelihood
 
@@ -251,7 +264,10 @@ Swapping sides maps η → −η and must map (W, D, L) → (L, D, W). With
 cutpoints symmetric around zero this holds exactly. Do **not** use free
 asymmetric cutpoints: side assignment is arbitrary in the data, so any
 asymmetry the sampler finds is noise, and the swap-invariance property test
-(T5.6) will fail.
+(T5.6) will fail. This form loses no generality — any side-swap-invariant
+three-category cumulative model reduces to it, and per match (η, c) can
+reach any W/D/L distribution exactly (M4). Why the logistic link
+specifically (Rao–Kupper/Bradley–Terry lineage, tail behavior): M3.
 
 ### T5.2 Linear predictor
 
@@ -317,6 +333,14 @@ happen:
   race), where "prior" is computed strictly from earlier matches (another
   leakage point: compute it in the data layer with an as-of join, and test
   it).
+- Deferred variant — experience *against* the opponent's race (or full
+  matchup experience): plausibly real, concentrated in gimmick races
+  (Vampires, Slann, stunties), but near-collinear with θ and α under
+  proportional exposure and in need of a gimmickiness interaction to have
+  teeth. Out of scope for v1; the mechanism, the collinearity argument,
+  and the cheap residual probe that gates it are in M8/M11. The probe runs
+  with the milestone-2 residual analysis (T7) — do not add the term before
+  it shows signal.
 - Milestone-4 upgrade (per FR8b): piecewise-constant θ per calendar year
   with a random-walk prior between years, pooled innovation variance.
   Structure the code so θ's index set is a parameter (coach vs. coach×year)
@@ -343,9 +367,17 @@ c = softplus( c0
   max is defensible — a draw is broken by whichever side can break it — but
   start with sum for smoothness). An asymmetric form breaks side-swap
   invariance.
-- softplus (or exp) keeps c > 0. Expected signature for the gate's sanity
-  check (§9a): λ < 0 under win-rewarding scoring — mass moves from D to
-  both W and L for flexible races.
+- softplus (or exp) keeps c > 0 — softplus preferred: near-linear away
+  from zero, so κ and λ read as additive changes to the draw half-width,
+  and its bounded gradient avoids exp's HMC-geometry failure modes (M5).
+  Expected signature for the gate's sanity check (§9a): λ < 0 under
+  win-rewarding scoring — mass moves from D to both W and L for flexible
+  races.
+- Note the symmetric-c channel is not a 50/50 split of vacated draw mass —
+  the split follows η, favoring the stronger side (M6). What it *cannot*
+  express is a directional edge for the more flexible side per se; that is
+  a location effect, λ₂·s_p·(flex_A − flex_B) in η, deliberately deferred
+  (identified only at pack-level N; see M6 and the M11 register).
 
 ### T5.5 Matchup structure (FR8a)
 
@@ -448,9 +480,9 @@ Property-based tests, exact up to float tolerance:
 Per-coach multinomial logit over available races at an event:
 
 ```
-U(coach n, race r) = a · loyalty(n, r)      # e.g. log(1 + prior events with r), plus last-race indicator
-                   + b · pop_r              # recent global/regional pick share
-                   + c · fav_r(field)       # field-conditional favorability (T6.2)
+U(coach n, race r) = β_loy · loyalty(n, r)  # e.g. log(1 + prior events with r), plus last-race indicator
+                   + β_pop · pop_r          # recent global/regional pick share
+                   + β_fav · fav_r(field)   # field-conditional favorability (T6.2)
                    + intercept_r
 ```
 
@@ -561,7 +593,10 @@ assumption produced a number.
   commit `eval/GATE.md`, then the gate.
 - Confound check (§8): report the coach×pack bipartite connectivity (PS7)
   and per-race switcher counts alongside the gate; sensitivity refit with
-  non-switching coaches' race effects examined.
+  non-switching coaches' race effects examined. The residual analysis also
+  carries the advisory opponent-experience probe (M8): residuals in
+  matches against high-gimmick races vs. the opponent's prior exposure
+  count — no refit, gates the M11 deferred term.
 
 ## T8. Known failure modes (checklist for implementers)
 
@@ -681,6 +716,10 @@ are listed; anything not listed as a dependency can proceed in parallel.
 - Exact descriptor list and scoring-incentive feature definition — W6/W10
   authoring work, expected to be revised at schema v1 after the gate's
   residual analysis (§9a).
+- Unscheduled candidate features (opponent-race/matchup experience,
+  flexibility-difference scoring term in η) are deliberately out of scope
+  for v1 — registered with mechanisms and revival conditions in M11; they
+  are not open decisions and should not be added ad hoc.
 - Web UI stack (FR13) — untouched until milestone-2 outputs exist.
   **Warning for the notebook phase**: no persistent model-artifact/query
   boundary exists yet, which is fine — but notebooks must only call `src/`
