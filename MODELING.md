@@ -31,7 +31,7 @@ version; this is the authoritative table.
 | α_{r,v} | baseline of race r at roster version v; centered across contemporaneously comparable races | T5.2 |
 | z_{p,r} | treatment vector of pack p for race r, derived per T4.2 (centered, standardized) | T5.2 |
 | γ_r, γ̄, Σ_γ | race r's treatment-response coefficients; hierarchical mean and covariance | T5.2 |
-| f, ψ, n_{i,r} | familiarity f = ψ·log(1 + n_{i,r}); n = coach i's strictly-prior games with race r | T5.3 |
+| f, ψ, n_{i,r} | observed-history proxy f = ψ·log(1 + n_{i,r}); n = coach i's strictly-prior NAF games with race r | T5.3 |
 | m(r_A, r_B) | matchup term x̃_A′ M x̃_B | T5.5 |
 | x_r, x̃_r | raw and edition-reference-centered descriptor vectors of race r at its roster version | T5.5 |
 | M, τ | skew-symmetric matchup matrix (M = −M′); shrinkage scale of its entries | T5.5 |
@@ -40,7 +40,7 @@ version; this is the authoritative table.
 | s_p | win-incentive scalar of pack p's scoring system, standardized and reference-centered | T5.4 |
 | flex_r | strategic-flexibility descriptor of race r (FR8a) | T5.4 |
 | U(n, r) | field-model choice utility of coach n for race r | T6.1 |
-| β_loy, β_pop, β_fav | choice-model coefficients: loyalty, popularity, favorability | T6.1 |
+| β_* | choice-model coefficients for exact history, transfer, complexity, repertoire/switching, popularity, and favorability | T6.1 |
 | fav_r, field^k, ρ | favorability of race r; k-th field iterate; fixed-point damping factor | T6.2 |
 
 Note the scope split: everything through T5 lives on the match-outcome
@@ -292,13 +292,17 @@ matches later in calendar time because it asks a different question, but it
 must not be described as a historical forecast. Predictions integrate over
 the coach posterior rather than treating a displayed mean rating as known.
 
-**Why the familiarity curve is ψ·log(1+n).** The mechanism is a learning
-curve: the first few games with a race teach the most (what the pieces
-do, the opening plans), and returns diminish. log(1+n) is the simplest
-concave curve with f(0) = 0, and one shared ψ keeps it estimable. The
-alternative — a free coach×race random effect — is enormous, nearly
-empty, and would soak up genuine matchup signal (T5.3); the parametric
-curve is the honest amount of structure for the data.
+**Why `ψ·log(1+n_NAF)` is only a proxy.** Observed NAF history is a noisy
+lower bound on experience: BB3, FUMBBL, leagues, casual play, and unrecorded
+tabletop games are missing. The concave transform is still a compact
+predictive summary of observed history, but `ψ` is not a causal learning rate
+and `n_NAF=0` is not proof of novelty. This matters for the gate because hidden
+online specialists may first appear on NAF with a race precisely when a pack
+favors it. T7 therefore requires no-history, log-history, coarse-bucket,
+established-history-only, and first-observed-use sensitivities. A latent online
+exposure model is not identifiable without linked data. The alternative free
+coach×race random effect remains enormous, sparse, and liable to absorb
+matchup signal.
 
 **The deferred variant: experience against the opponent's race.** One
 could add f_vs = ψ₂·log(1 + games against r_B) to s(side), or even a full
@@ -383,16 +387,37 @@ the unlocks sit.
 
 ## M10. Field model choices, briefly
 
-Per-coach multinomial logit (T6.1) is the standard discrete-choice tool,
-and the utility terms mirror the actual decision: loyalty first (largely
-material — miniatures owned and painted; FR9 warns against reading it as
-pure preference), popularity (metas are social), favorability last.
-Favorability is field-conditional (FR9a) because a race's expected
-tournament points depend on what it will actually face — hence the fixed
-point, damped because loyalty genuinely damps real-world best-response.
-E[points] rather than winrate because coaches optimize what the pack
-scores, and draws are frequent enough for the difference to matter. The
-equilibrium diagnostic (FR12) removes loyalty and must switch to
+Per-coach multinomial logit (T6.1) remains the v1 discrete-choice tool, but the
+legal set is not mistaken for either an ownership set or a set of equally easy
+alternatives. Every legal race remains possible. Exact NAF history supplies
+soft loyalty; repertoire breadth, entropy, switching rate, and history depth
+change the penalty for a race new to observed history. Thus one race over 100
+games is stronger friction evidence than one race over five games, while a
+ten-race coach is allowed to branch more readily.
+
+The causes remain deliberately unidentified. Narrow history may reflect
+miniature cost, borrowing access, preference, online loyalty, or missing
+experience. BB3/FUMBBL specialists can borrow or buy a favored roster and
+arrive well practiced despite zero NAF games. The model therefore uses a soft
+penalty, never a hard consideration set, and allows favorability advantage
+over established options to overcome it.
+
+Transfer uses a small reviewed geometry rather than a learned embedding: a
+bash↔agile coordinate, separate stunty dimension, and entry complexity
+interacting with unfamiliarity. Distance is aggregated over the repertoire,
+not reduced to its centroid, so experience at both style extremes is not
+mistaken for experience only with hybrids. A race-specific novelty axis is not
+allowed; a general unusual-mechanics descriptor must be earned by a residual
+pattern across multiple races. Nested/similarity-aware substitution is a
+held-out IIA-triggered extension, not v1 default structure.
+
+Popularity remains because metas are social. Favorability is
+field-conditional (FR9a) because a race's expected base result points depend
+on what it will actually face — hence the fixed point, damped because observed
+repertoire friction genuinely damps real-world best-response. Expected result
+points rather than winrate matter because draws are frequent and packs weight
+them differently. The equilibrium diagnostic (FR12) removes empirical coach-history,
+repertoire/access friction, and popularity, and must switch to
 fictitious play precisely because the payoff matrix is intransitive by
 construction (M7): raw best-response can cycle. Averaged fictitious play
 has the standard convergence guarantee for the 2/1/0 constant-sum payoff;
@@ -424,6 +449,12 @@ stated condition.
 | Coach-style descriptors × opponent descriptors (labeled or latent) | Coaches have persistent playstyles and style-specific weaknesses (e.g. struggles against fast agile teams) | No labeling source at corpus scale; the latent version is a per-coach embedding — data is thin for all but the most active coaches, and shrinkage would zero it exactly where it can't be checked | Residual probe on high-volume coaches (per-coach baseline residuals vs. opponent descriptor vector) shows heterogeneous structure |
 | Coach×coach terms | Style or psychological matchups between specific coach pairs | Hopeless sparsity — most coach pairs ever meet a handful of times; any real signal is better routed through coach-style descriptors (row above) | None as a direct term; subsumed by the coach-style row |
 | Standings-conditional incentives | Late-round standings shape per-match W/D incentives (a draw can lock a placing); the symmetric part is a c effect, any one-sided need-to-win an η effect (M4) | Needs per-round standings reconstruction; largely washes out of the race-level aggregates this project targets | Swiss-pairing simulator work (W28), where round-level realism starts to matter |
+| Linked BB3/FUMBBL/league race exposure | Replaces the NAF-only history proxy with a broader measure of actual practice | Coach linkage and coverage may be biased or unavailable | Audited linkage with useful coverage and explicit source-specific provenance |
+| Style-transfer history in match performance | Experience on nearby bash/agile or stunty styles may transfer to a new race | Hidden online exposure and coach strength can mimic transfer; v1 uses style only in choice | Held-out outcome residuals retain descriptor-distance structure after exact NAF history and θ |
+| Nested or similarity-aware field substitution | New elf-like choices should substitute more from related races than unrelated bash races | Adds choice structure before ordinary MNL has demonstrated a material IIA failure | Held-out choice residuals show stable descriptor-structured substitution and predictive gain |
+| Direct ownership/access consideration stage | Miniature access creates real friction distinct from preference | NAF absence does not identify ownership, borrowing, or purchase | Direct survey, inventory, borrowing, or comparable access data become available |
+| General unusual-mechanics choice descriptor | Several mechanically novel races may have entry friction beyond bash/agile, stunty, and complexity | A one-race axis disguises an intercept and will not generalize | Multiple races share a reviewed mechanism and residual first-use pattern |
+| Heterogeneous coach meta-switching | Competitive generalists may respond to favorability more strongly than loyal specialists | Individual slopes are sparse and can overfit observed switching | Strongly pooled random slope improves held-out choice prediction for coaches with repeated events |
 
 Anything added here should state mechanism, deferral reason, and revival
 condition in the same shape — the register only works if a null result

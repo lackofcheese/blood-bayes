@@ -252,7 +252,7 @@ function 1/(1+e^(−x)); η the antisymmetric advantage of side A; c > 0 the
 draw half-width (cutpoints ±c); θ_i latent coach ability; α_{r,v} the
 baseline of race r at roster version v; z_{p,r} the derived treatment
 vector of pack p for race r; γ_r race r's treatment-response coefficients;
-f the coach×race familiarity curve; m(r_A, r_B) = x̃_A′ M x̃_B the matchup
+f the observed NAF coach×race history proxy; m(r_A, r_B) = x̃_A′ M x̃_B the matchup
 term over centered race descriptor vectors x̃_r with skew-symmetric M;
 c0, κ, λ the
 cutpoint intercept/scoring parameters; d_{r,v} the baseline race draw effect,
@@ -288,7 +288,7 @@ specifically (Rao–Kupper/Bradley–Terry lineage, tail behavior): M3.
 s(side) = θ_coach                      # latent coach ability (T5.3)
         + α_{race, roster_version}     # race baseline
         + γ_race · z_{pack, race}      # race × treatment response (challenger only)
-        + f(experience_coach,race)     # coach×race familiarity
+        + f(NAF_history_coach,race)    # weak observed-history proxy
 ```
 
 Consequences of the difference structure — these are the mistakes waiting to
@@ -348,12 +348,14 @@ happen:
   matchup adjustment, so using both risks double use and re-importing race
   effects. It may be evaluated as an external benchmark or, by an explicit
   later decision, used for material pre-dataset history unavailable here.
-- Familiarity: do **not** fit a free coach×race random effect in v1 — it is
-  enormous, sparse, and will soak up matchup signal. Use a parametric
-  experience curve: f = ψ · log(1 + prior games of this coach with this
-  race), where "prior" is computed strictly from earlier matches (another
-  leakage point: compute it in the data layer with an as-of join, and test
-  it).
+- Observed NAF race history: do **not** fit a free coach×race random effect in
+  v1 — it is enormous, sparse, and will soak up matchup signal. Use
+  `f = ψ·log(1+n_NAF)` as a weak predictive proxy, where `n_NAF` is computed
+  strictly from earlier NAF matches via a tested as-of join. Do not call `ψ`
+  a learning effect or treat zero as proof of inexperience: BB3, FUMBBL,
+  league, casual, and unrecorded tabletop play are missing. No latent online
+  exposure is fitted without linkable data. T7 defines gate sensitivities for
+  this measurement error and first-observed-use selection.
 - Deferred variant — experience *against* the opponent's race (or full
   matchup experience): plausibly real, concentrated in gimmick races
   (Vampires, Slann, stunties), but near-collinear with θ and α under
@@ -537,26 +539,53 @@ Property-based tests, exact up to float tolerance:
 
 ### T6.1 Choice model (FR9)
 
-Per-coach multinomial logit over available races at an event:
+Per-coach multinomial logit over every race legal at the event. All features
+are constructed from history strictly before that event.
 
 ```
-U(coach n, race r) = β_loy · loyalty(n, r)  # e.g. log(1 + prior events with r), plus last-race indicator
-                   + β_pop · pop_r          # recent global/regional pick share
-                   + β_fav · fav_r(field)   # field-conditional favorability (T6.2)
-                   + intercept_r
+U(n,r) = β_loy · exact_history(n,r)
+       + β_last · last_race(n,r)
+       + β_transfer · style_transfer(n,r)
+       − β_complex · complexity_r · unfamiliarity(n,r)
+       + β_pop · pop_r
+       + β_fav · fav_r(field)
+       + new_to_NAF(n,r) · (
+           β_new
+           + β_rep · repertoire_profile(n)
+           + β_gain · favorability_advantage(n,r)
+         )
+       + intercept_r
 ```
 
+- `exact_history` is a saturating summary of strictly prior NAF games/events
+  with r. `new_to_NAF` means absent from the permitted NAF history, not newly
+  purchased, newly learned, or unowned.
+- `repertoire_profile` is a small vector whose effects exist only through the
+  new-race interaction: effective repertoire breadth/entropy, historical
+  event-to-event switching rate, and history depth. Many observations over a
+  narrow repertoire are stronger friction evidence than a short record;
+  sparse coach summaries are hierarchically shrunk.
+- `style_transfer` uses a frozen low-dimensional similarity kernel over a
+  reviewed bash↔agile coordinate and separate stunty dimension, aggregated
+  over the coach's prior races. Do not summarize a broad repertoire only by
+  its centroid: experience at both extremes must not look like experience only
+  with hybrid races. `unfamiliarity` decreases with exact and transferable
+  history.
+- `complexity_r` is a reviewed entry-complexity descriptor separate from
+  style. It is penalized only through unfamiliarity. Do not add a race-specific
+  novelty axis; a general unusual-mechanics descriptor requires a residual
+  pattern shared by multiple races.
+- `favorability_advantage(n,r)` is r's favorability minus the best
+  favorability among n's established legal races, with a documented cold-start
+  convention when none exist. It allows a strong pack advantage to overcome
+  soft repertoire friction. Every legal race retains nonzero probability.
 - Fit on historical (coach, event, chosen race) rows. Only open events in
   the training set; squad events (EuroBowl) are excluded from fitting the
   individual-choice model (§5.1) and handled by the FR9c variant later.
-- The popularity **and loyalty** features have the same temporal leakage
-  exposure as coach strength and familiarity: "recent pick share", "prior
-  events with r", and the last-race
-  indicator must all be computed strictly from pre-event data via the same
-  as-of-join discipline as T5.3, and tested the same way.
-- Loyalty is expected to dominate — that is real (miniature ownership, per
-  FR9) and not a modeling failure. Don't interpret the coefficient as pure
-  preference in any output text.
+- Popularity, exact history, switching, breadth, transfer, and last-race
+  features use the same tested pre-event as-of discipline as T5.3. NAF history
+  is a predictive proxy for a mixture of access, preference, online loyalty,
+  and missing experience; coefficients are not labeled as any one cause.
 - Race intercepts and popularity are near-collinear; if both are included,
   regularize and don't interpret them separately — or drop intercepts and
   let popularity carry it. Decide once, document in code.
@@ -565,6 +594,10 @@ U(coach n, race r) = β_loy · loyalty(n, r)  # e.g. log(1 + prior events with r
   favorability; use leave-pack-out predictions when measuring generalization
   to unseen packs. Persist the split key with the generated feature so an
   in-sample favorability value cannot be substituted accidentally.
+- Benchmark against the simpler exact-loyalty + popularity + favorability
+  model. A hard consideration/ownership set is prohibited without direct
+  access data. Nested or similarity-aware substitution is deferred until
+  held-out residuals show a material IIA failure.
 
 ### T6.2 Favorability fixed point (FR9a)
 
@@ -574,8 +607,8 @@ fav^k_r  = Σ_o field^k_o · E[points r vs o | pack]      # from the match model
 field^k+1 = (1 − ρ) · field^k + ρ · choice(fav^k)       # damped update, ρ ≈ 0.5
 ```
 
-`E[points]` is expected per-game tournament points under the pack's scoring
-system's base W/D/L values (the pack's win/draw/loss points weighted by the
+`E[points]` is expected per-game base result points under the pack's W/D/L
+values (the pack's win/draw/loss points weighted by the
 match model probabilities), per FR9a — coaches optimize points, not winrate,
 and draws are frequent. V1 does not add TD/CAS or other performance bonuses.
 For a bonus-bearing pack, return `points_scope = base_result_only`,
@@ -583,8 +616,9 @@ For a bonus-bearing pack, return `points_scope = base_result_only`,
 bonus rule or encoding its incentive in `s_p` does not calculate its expected
 award.
 
-Iterate to tolerance; expected 1–2 effective rounds because loyalty damps
-best-response (PRD §4). Always cap iterations and log the trajectory —
+Iterate to tolerance; expected 1–2 effective rounds because empirical
+repertoire/history friction damps best-response (PRD §4). Always cap
+iterations and log the trajectory —
 convergence failure is diagnostic information, not an exception to swallow.
 
 Uncertainty propagation for FR10: run the whole fixed point over joint draws
@@ -596,7 +630,8 @@ must reflect uncertainty from both models flowing through field projection.
 
 ### T6.3 Equilibrium diagnostic (FR12)
 
-Same payoff machinery, loyalty term removed, solved by **fictitious play**
+Same payoff machinery, with empirical coach-history, repertoire/access
+friction, and popularity terms removed, solved by **fictitious play**
 (best-respond to the *running average* field, not the last iterate). Raw
 best-response on an intransitive payoff matrix can cycle. Under 2/1/0 result
 scoring the two-player payoff is constant-sum, so the running average has the
@@ -709,6 +744,12 @@ not select their algorithms in advance.
   pack-level folds, with uncertainty or detectable-effect limits reported.
   In-sample residual silence is not grounds for retiring a registered
   feature.
+- NAF-history sensitivity (FR8d): rerun or re-evaluate the gate with no
+  history term, `log(1+n_NAF)`, and coarse prior-history buckets; additionally
+  report an established-history-only subset and a first-observed-race-use
+  diagnostic. Hidden online/league specialists may enter NAF with a race when
+  a favorable pack selects for them, so instability here is a treatment-effect
+  confounding warning rather than evidence of a literal learning curve.
 
 ## T8. Known failure modes (checklist for implementers)
 
@@ -760,6 +801,15 @@ results. Review against this list before trusting any fitted model.
     must differ only by the race×treatment response block.
 20. Fitting free race-pair draw effects in v1 rather than first testing the
     held-out residual structure after hierarchical additive race effects.
+21. Treating zero prior NAF games as zero total experience, or interpreting
+    the NAF-history coefficient as a causal learning curve.
+22. Removing an event-legal race from a coach's choice set merely because it
+    is absent from NAF history; repertoire friction is soft and predictive,
+    not an inferred ownership state.
+23. Adding a coach-only repertoire feature equally to every race utility — it
+    cancels from multinomial probabilities. Breadth/switching/history-depth
+    effects must interact with new-to-observed-history status or another
+    race-varying feature.
 
 ## T9. Work breakdown
 
@@ -790,7 +840,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; centering-invariance test (T5.6.3) passes |
 | W14 | Pre-register `eval/GATE.md`: criteria finalized using W15's power rehearsal, training-corpus decision, known-case anchor list (T7, §9a) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
 | W15 | Exploratory correlation pass (§9a; stunty scatter headline); simulation-based power rehearsal (T5.6.6); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
-| W16 | Challenger model (shared baseline/cutpoints + race×treatment only) + leave-pack-out CV + gate report | W9, W13, W14 | Binding gate verdict + raw/residual heterogeneity diagnostic + confound/connectivity appendix (T7) |
+| W16 | Challenger model (shared baseline/cutpoints + race×treatment only) + leave-pack-out CV + gate report | W9, W13, W14 | Binding verdict + heterogeneity diagnostic + NAF-history sensitivities + confound/connectivity appendix (T7) |
 
 ### Milestone 3 — automated parsing (conditional on gate pass)
 
@@ -803,7 +853,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
-| W19 | Field choice model v1 (loyalty + popularity + favorability) | W3, W16 | Historical favorability is cross-fitted; held-out event field prediction beats popularity-only baseline |
+| W19 | Field choice model v1 (soft repertoire/switching + style transfer + complexity + popularity + favorability) | W3, W16 | History is as-of masked and favorability cross-fitted; richer model beats exact-loyalty baseline on held-out event field prediction or is simplified with a documented null |
 | W20 | Favorability fixed point + posterior-draw propagation (T6.2) | W19 | Convergence logged; intervals reflect joint match- and field-model posterior draws |
 | W21 | FR10/FR10a/FR11 report generator (random-pairing assumption, labeled) | W20 | FR11 estimand contract committed before implementation; end-to-end run on Eucalyptus Bowl pack |
 | W22 | Equilibrium diagnostic (FR12) | W20 | Multi-start non-uniqueness check implemented; caveats embedded in output |
@@ -835,9 +885,16 @@ are listed; anything not listed as a dependency can proceed in parallel.
   with treatment terms active only where annotated (PRD §10). Decided at
   W14, before `eval/GATE.md`; the power rehearsal (W15) simulates whichever
   is chosen.
+- Treatment composites and residual `Σ_γ` structure — paused for the
+  domain/statistical review in `DOMAIN_EXPERT_REVIEW.md`. Freeze at most two
+  or three mechanistic composites before schema v0; then choose the residual
+  covariance, with diagonal per-feature scales the conservative candidate.
 - Exact descriptor list and scoring-incentive feature definition — W6/W10
   authoring work, expected to be revised at schema v1 after the gate's
   residual analysis (§9a).
+- Field-choice bash↔agile/stunty geometry and entry-complexity rubric — also
+  reviewed in `DOMAIN_EXPERT_REVIEW.md`, but downstream of the treatment gate.
+  Freeze before W19 and validate against the simpler exact-loyalty model.
 - Unscheduled candidate features (opponent-race/matchup experience,
   flexibility-difference scoring term in η) are deliberately out of scope
   for v1 — registered with mechanisms and revival conditions in M11; they

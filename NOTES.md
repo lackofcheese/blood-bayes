@@ -1,8 +1,9 @@
 # Decision notes
 
-Working decisions from review discussions. These notes record owner intent;
-the corresponding changes still need to be propagated into `PRD.md`,
-`MODELING.md`, and `TECHNICAL.md` before implementation.
+Working decisions from review discussions. Approved decisions are propagated
+into `PRD.md`, `MODELING.md`, and `TECHNICAL.md` unless a section explicitly
+says it is paused or awaiting expert refinement. The self-contained review
+request is `DOMAIN_EXPERT_REVIEW.md`.
 
 ## 2026-07-12 — Upstream model corrections
 

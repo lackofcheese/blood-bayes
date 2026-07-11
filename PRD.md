@@ -166,7 +166,7 @@ and generalize to unseen packs.
   v1 model remains ordinal W/D/L regardless.
 - FR8: Components: race baseline; matchup structure (descriptor-based first,
   optional learned low-rank residual later — see FR8a); coach strength fit
-  from match history (see FR8b); coach×race familiarity; race ×
+  from match history (see FR8b); observed NAF coach×race history proxy; race ×
   treatment-vector interactions with hierarchical pooling.
 - FR8a: Matchup descriptors are hand-authored continuous race attributes in
   v1 (e.g. armour profile, agility/mobility profile, strength access,
@@ -227,15 +227,29 @@ and generalize to unseen packs.
   whatever the incentive. Expected signature: probability mass moves from D
   to both W and L for high-flexibility races under win-rewarding scoring;
   this doubles as a coefficient-sanity check at the gate (§9a).
-- FR9: Field-composition model: per-coach discrete choice using coach race
-  history (loyalty), race popularity, and pack favorability. Note: "loyalty"
-  is partly material, not psychological — many coaches own miniatures for
-  only one or two teams — so high observed stickiness is expected and real;
-  the model doesn't need to distinguish the mechanisms, but interpretation
-  of the loyalty term should not read it as pure preference. Field
-  projection for a genuinely new event (no attendee history) is
-  de-prioritized; primary use assumes a known or historical coach pool
-  (e.g. last edition's attendees).
+- FR8d: Prior NAF games with a race are a masked predictive familiarity proxy,
+  not total experience or an identified learning curve. Online (BB3/FUMBBL),
+  league, casual, and unrecorded tabletop play are missing. Hidden specialists
+  may first appear on NAF with a race precisely when a pack favors it, so the
+  gate reports no-history, `log(1+n)`, coarse-bucket,
+  established-history-only, and first-observed-use sensitivities. Do not fit a
+  latent online-experience model without linkable data.
+- FR9: Field-composition model: per-coach discrete choice over every race legal
+  at the event, using exact-race history, observed repertoire breadth/entropy
+  and switching rate, low-dimensional style transfer, entry complexity,
+  regional popularity, and pack favorability. A race absent from NAF history
+  receives soft repertoire friction, never zero probability. Long narrow
+  histories are stronger evidence than short histories; a sufficiently large
+  favorability advantage over the coach's established options may overcome
+  that friction. Candidate style geometry is a frozen bash↔agile axis plus a
+  separate stunty dimension; complexity is separate and interacts with
+  unfamiliarity. These are predictive summaries, not claims about ownership,
+  borrowing, poverty, purchase, preference, or total experience. Field
+  projection for a genuinely new event (no attendee history) is de-prioritized;
+  primary use assumes a known or historical coach pool (e.g. last edition's
+  attendees). Hard consideration sets, learned race embeddings, and nested
+  substitution are not v1 requirements; the latter is revived only for a
+  material held-out IIA failure.
 - FR9a (refinement): favorability input to FR9 is field-conditional —
   matchup-weighted expected per-game **base result points** under the pack's
   W/D/L scoring vs. the currently projected field, not isolated race
@@ -276,8 +290,9 @@ and generalize to unseen packs.
   counterfactual, and whether field composition is held fixed or recomputed.
   Default reports must not describe this observational-model output as a
   causal effect.
-- FR12 (exploratory): equilibrium meta diagnostic — the FR9a machinery with
-  the loyalty term removed, solved by fictitious play (averaged
+- FR12 (exploratory): equilibrium meta diagnostic — the FR9a payoff machinery
+  with empirical coach-history, repertoire/access-friction, and popularity
+  terms removed, solved by fictitious play (averaged
   best-response) rather than raw iteration: loyalty is the damping term, and
   without it best-response on an intransitive payoff matrix can cycle;
   fictitious play averages the cycling best responses. Under 2/1/0 result
@@ -502,7 +517,10 @@ all vary within the corpus).
   pooling fallback (FR3) is invoked, and if so with what era-adjustment
   structure.
 - Treatment-vector schema completeness: which rule levers matter enough to
-  encode? (Resolved empirically at milestone 2.)
+  encode? Mechanistic composites and residual treatment-response covariance
+  are paused for `DOMAIN_EXPERT_REVIEW.md`, then frozen before the power
+  rehearsal/gate. Schema omissions discovered by the gate become schema-v1
+  work rather than post-hoc gate changes.
 - NAF data access: expected via NAF contacts (format TBD). The data request
   should explicitly ask for: per-match TD/CAS counts (see FR7), coach NAF
   numbers (not names only), and tournament metadata. Historical Glicko may be
