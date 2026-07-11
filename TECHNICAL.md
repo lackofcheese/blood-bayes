@@ -89,8 +89,9 @@ derived files.
   numbers are the canonical coach key; name-based matching is a last resort
   and must be flagged.
 - `race` / `roster_version`: see T3.2.
-- `naf_rating_snapshot` (optional, FR8b): per coach × race × month, mu/phi —
-  only ever joined **as of tournament start date** (T5.7).
+- `naf_rating_snapshot` (optional benchmark artifact): per coach × race ×
+  month, mu/phi. Keep outside primary model feature tables; it is used only
+  for external comparison or a separately approved prehistory analysis.
 
 ### T3.2 Race registry and roster versions
 
@@ -117,10 +118,8 @@ roster version in that span and no parameters for it. Never zero-fill.
   metadata (region, event type) — that's registry curation work, not parser
   work. The data request should explicitly ask for: per-match TD/CAS counts
   (NAF has historically recorded them; see `match` columns above), coach
-  NAF numbers (not names only), tournament metadata, and whether historical
-  monthly Glicko snapshots exist — the FR8b lagged prior is contingent on
-  snapshots; if only current ratings exist, the prior is dropped (T5.3),
-  not approximated.
+  NAF numbers (not names only), and tournament metadata. Historical Glicko
+  snapshots are optional benchmark data, not a dependency of FR8b.
 - **Tourplay** (FR2): check ToS and rate limits **before** writing a scraper
   (§10). Milestone 1 needs only enough Tourplay access to assess ruleset
   availability; the full importer is milestone 3. Cache every response in
@@ -253,10 +252,12 @@ function 1/(1+e^(−x)); η the antisymmetric advantage of side A; c > 0 the
 draw half-width (cutpoints ±c); θ_i latent coach ability; α_{r,v} the
 baseline of race r at roster version v; z_{p,r} the derived treatment
 vector of pack p for race r; γ_r race r's treatment-response coefficients;
-f the coach×race familiarity curve; m(r_A, r_B) = x_A′ M x_B the matchup
-term over race descriptor vectors x_r with skew-symmetric M; c0, κ, λ the
-cutpoint parameters; s_p the pack's scoring-incentive scalar; flex_r the
-strategic-flexibility descriptor.
+f the coach×race familiarity curve; m(r_A, r_B) = x̃_A′ M x̃_B the matchup
+term over centered race descriptor vectors x̃_r with skew-symmetric M;
+c0, κ, λ the
+cutpoint intercept/scoring parameters; d_{r,v} the baseline race draw effect,
+decomposed into β_flex·flex_{r,v} + u_{r,v}; s_p the pack's
+scoring-incentive scalar; flex_r the strategic-flexibility descriptor.
 
 ### T5.1 Likelihood
 
@@ -303,9 +304,13 @@ happen:
   Similarly PS3's "region enters as a covariate" is about the *field/choice*
   side and residual diagnostics, not a term in η.
 - **Race baselines are only identified relatively.** Impose a sum-to-zero
-  constraint on α within each roster-version block (or pin a reference
-  race). Prefer sum-to-zero: it keeps priors interpretable and doesn't make
-  one race's posterior artificially exact.
+  constraint across the contemporaneously comparable race-version states
+  active in each rules edition (or connected competition environment), not
+  within an individual roster-version key. Under the primary BB2025-only
+  plan this is simply the active BB2025 race set. If W5 activates BB2020
+  pooling, parameterize BB2025 as the reference and add hierarchical
+  per-race BB2020 deviations, then center the resulting active race strengths
+  within each edition. Races absent from an edition are structurally missing.
 - **Treatment effects are identified by within-race variation across
   packs** (hence PS1) and enter η as the difference
   γ_{r_A}·z_{p,r_A} − γ_{r_B}·z_{p,r_B}. Hierarchical pooling across races:
@@ -324,19 +329,25 @@ happen:
 
 ### T5.3 Coach ability (FR8b)
 
-- v1: static latent θ_i ~ N(μ_i, σ_θ), non-centered, with σ_θ hierarchical.
-- Optional prior mean from NAF Glicko: μ_i = δ · standardized(mu_i as of the
-  match's tournament start). NAF mu is per coach×race: standardize **within
-  race × rating period** (the coach's standing relative to other coaches of
-  that race), so race strength does not re-enter the coach prior — raw mu
-  for the race being played would re-import exactly the race effect FR8b
-  declines to double-count. Use the within-race-standardized mu for the race
-  being played; if the coach is unrated there, their mean standardized mu
-  across rated races; otherwise μ_i = 0. **Leakage rule**: any Glicko value used for a
-  match must be computed from ratings published strictly before that
-  tournament. If snapshot history isn't available, set μ_i = 0 and rely on
-  pooling — do not substitute current ratings "just for initialization";
-  they encode the outcomes being predicted.
+- v1: static latent `θ_i ~ N(0, σ_θ)`, non-centered, with a pooled prior on
+  `σ_θ`. Infer it jointly from the permitted match history alongside race,
+  matchup, treatment, and familiarity effects. New coaches receive the
+  population prior; sparse coaches shrink toward it rather than receiving a
+  fixed fallback score.
+- Reconstruct coach posteriors inside every mask. The thesis gate excludes all
+  matches belonging to the held-out pack; event validation excludes the
+  held-out event; a prospective forecast uses matches strictly before its
+  cutoff. Retrospective leave-pack-out evaluation may use other permitted
+  matches on either side of the held-out event date, but must be labeled
+  retrospective rather than historical forecasting.
+- Preserve and propagate the posterior distribution, not only a point score.
+  Any materialized summary carries `coach_id`, `as_of_date`, excluded
+  pack/event, model version, posterior mean, and posterior SD.
+- NAF Glicko is not a model input, prior, or cold-start value. It summarizes
+  largely the same outcomes by coach×race without this model's ruleset and
+  matchup adjustment, so using both risks double use and re-importing race
+  effects. It may be evaluated as an external benchmark or, by an explicit
+  later decision, used for material pre-dataset history unavailable here.
 - Familiarity: do **not** fit a free coach×race random effect in v1 — it is
   enormous, sparse, and will soak up matchup signal. Use a parametric
   experience curve: f = ψ · log(1 + prior games of this coach with this
@@ -356,38 +367,56 @@ happen:
   Structure the code so θ's index set is a parameter (coach vs. coach×year)
   rather than baking "one θ per coach" into the design matrix builder.
 
-### T5.4 Cutpoints and scoring-system effects (FR8c)
+### T5.4 Draw propensity and scoring-system effects (FR8c)
 
-Scoring systems are pack-global, so (per T5.2) they cannot enter η. Both
-FR8c channels live in the cutpoints:
+The cutpoint model separates baseline race draw tendency from the response to
+pack-global scoring incentives:
 
 ```
 c = softplus( c0
-            + κ · s_p                          # (a) global draw-propensity shift
-            + λ · s_p · (flex_A + flex_B) )    # (b) flexibility interaction
+            + d[r_A, v_A] + d[r_B, v_B]       # baseline race draw tendency
+            + κ · s_p                          # global scoring shift
+            + λ · s_p · (flex_A + flex_B) )    # flexibility response
+
+d[r, v] = β_flex · flex[r, v] + u[r, v]
 ```
 
 - `s_p`: scalar (or small vector) win-incentive feature of the pack's
-  scoring system, standardized. Deriving it is annotation-guide work: e.g.
+  scoring system, standardized and centered so zero is the declared
+  reference scoring environment. Deriving it is annotation-guide work: e.g.
   (win points − draw points) relative to draw points, plus bonus-point
   structure.
 - `flex`: the tempo-control/strategic-flexibility descriptor (FR8a), keyed
-  race × roster version.
+  race × roster version and centered over the stored uniform edition
+  reference. `β_flex` represents the baseline association between that
+  ability and decisiveness; `λ` represents the additional response as scoring
+  incentives move away from reference.
+- `u[r,v]`: residual race/roster-version draw propensity for mechanisms not
+  captured by flexibility. Give it a hierarchical prior and constrain its
+  uniform mean across active race-version states in each edition to zero, so
+  it cannot duplicate `c0`. Mirror matches, which receive `2d[r,v]`, provide
+  especially clean information.
 - The flexibility combination must be **symmetric** in A and B (sum here;
   max is defensible — a draw is broken by whichever side can break it — but
   start with sum for smoothness). An asymmetric form breaks side-swap
   invariance.
 - softplus (or exp) keeps c > 0 — softplus preferred: near-linear away
-  from zero, so κ and λ read as additive changes to the draw half-width,
-  and its bounded gradient avoids exp's HMC-geometry failure modes (M5).
-  Expected signature for the gate's sanity check (§9a): λ < 0 under
-  win-rewarding scoring — mass moves from D to both W and L for flexible
-  races.
+  from zero, so the coefficients read as additive changes to the draw
+  half-width, and its bounded gradient avoids exp's HMC-geometry failure
+  modes (M5). Expected signature: λ < 0 under win-rewarding scoring — mass
+  moves from D to both W and L for flexible races. `d`, `κ`, and `λ` are
+  shared nuisance terms in the thesis-gate baseline and challenger; only the
+  race×treatment block differs. The `λ` sign is advisory model validation,
+  not a binding gate criterion.
 - Note the symmetric-c channel is not a 50/50 split of vacated draw mass —
   the split follows η, favoring the stronger side (M6). What it *cannot*
   express is a directional edge for the more flexible side per se; that is
   a location effect, λ₂·s_p·(flex_A − flex_B) in η, deliberately deferred
   (identified only at pack-level N; see M6 and the M11 register).
+- Do not fit free race-pair draw effects in v1. Use held-out
+  posterior-predictive residuals to test whether symmetric pair structure
+  remains after `d`; if it does, prefer a tightly regularized symmetric
+  descriptor interaction over an unpooled parameter for every pair.
 
 ### T5.5 Matchup structure (FR8a)
 
@@ -395,16 +424,27 @@ v1 is descriptor-based. Let x_r be the descriptor vector (armour, agility/
 mobility, strength access, stunty flag, flexibility, …) for race r at its
 roster version.
 
+- Before constructing matchup terms, center every descriptor column over a
+  frozen reference distribution: uniform weights across races active in the
+  relevant rules edition. Write `x̃_r = x_r − μ_x,edition` and store the
+  edition, race list, descriptor schema version, weights, and means with the
+  model artifact. BB2020 gets a separate reference only if W5 activates
+  pooling. Never use observed or projected popularity as the weights, and do
+  not recompute means for a query pack or new roster.
 - Descriptor **main effects are already absorbed** by the free race
   baselines α — a term w·(x_A − x_B) is redundant and will just fight α in
   the posterior. The matchup term must contain only genuine *interactions*.
-- Parameterize as a skew-symmetric bilinear form:
-  `m(A, B) = x_A' M x_B` with `M = −M'` (free parameters: the strictly
+- Parameterize as a skew-symmetric bilinear form over centered descriptors:
+  `m(A, B) = x̃_A' M x̃_B` with `M = −M'` (free parameters: the strictly
   upper triangle, K(K−1)/2 for K descriptors). This is automatically
   antisymmetric (m(A,B) = −m(B,A)) and zero for mirrors. Each M_kl reads as
   "descriptor k beats descriptor l" (e.g. armour beats low-strength bash;
   agility beats high-armour-low-mobility), which serves FR11-style
   interpretation.
+- Centering additionally guarantees that the induced matchup matrix has zero
+  weighted row mean (`C · w = 0`; `C · 1 = 0` under uniform weights). Thus M
+  cannot reproduce a transitive `v_A − v_B` strength scale already carried by
+  α. Skew-symmetry alone does not provide this separation.
 - With ~5–8 descriptors this is 10–30 parameters — fit with a shrinkage
   prior (e.g. M_kl ~ N(0, τ), τ half-normal).
 - Milestone-4 upgrade: learned low-rank skew-symmetric residual
@@ -469,9 +509,13 @@ Property-based tests, exact up to float tolerance:
    shifting every race's treatment within one pack legitimately changes
    predictions, because race-specific γ_r responses are the thesis — a pack
    granting everyone more skills helps some races more.
-4. **No-leakage**: the experience feature and Glicko prior for a match
-   depend only on strictly earlier data (test with a synthetic timeline).
-5. **Parameter recovery**: simulate data from known parameters at realistic
+4. **Descriptor interaction centering**: for each edition reference, the
+   induced matchup matrix satisfies `C · w = 0` (`C · 1 = 0` for uniform
+   weights), while remaining skew-symmetric and mirror-zero.
+5. **No-leakage**: experience and materialized coach-strength summaries use
+   only data permitted by the event, pack, or prospective-time mask (test
+   with synthetic timelines and split keys).
+6. **Parameter recovery**: simulate data from known parameters at realistic
    sparsity (~20 packs, realistic coach/race distribution) and check the
    model recovers them within posterior uncertainty. Do this **before** the
    thesis gate — it also rehearses whether the gate has any power at N≈20
@@ -505,8 +549,9 @@ U(coach n, race r) = β_loy · loyalty(n, r)  # e.g. log(1 + prior events with r
 - Fit on historical (coach, event, chosen race) rows. Only open events in
   the training set; squad events (EuroBowl) are excluded from fitting the
   individual-choice model (§5.1) and handled by the FR9c variant later.
-- The popularity **and loyalty** features have the same leakage exposure as
-  Glicko: "recent pick share", "prior events with r", and the last-race
+- The popularity **and loyalty** features have the same temporal leakage
+  exposure as coach strength and familiarity: "recent pick share", "prior
+  events with r", and the last-race
   indicator must all be computed strictly from pre-event data via the same
   as-of-join discipline as T5.3, and tested the same way.
 - Loyalty is expected to dominate — that is real (miniature ownership, per
@@ -530,9 +575,13 @@ field^k+1 = (1 − ρ) · field^k + ρ · choice(fav^k)       # damped update, �
 ```
 
 `E[points]` is expected per-game tournament points under the pack's scoring
-system (the pack's win/draw points weighted by the match model's W/D/L
-probabilities), per FR9a — coaches optimize points, not winrate, and draws
-are frequent.
+system's base W/D/L values (the pack's win/draw/loss points weighted by the
+match model probabilities), per FR9a — coaches optimize points, not winrate,
+and draws are frequent. V1 does not add TD/CAS or other performance bonuses.
+For a bonus-bearing pack, return `points_scope = base_result_only`,
+`bonus_points_modeled = false`, and `bonus_rules_present = true`; annotating a
+bonus rule or encoding its incentive in `s_p` does not calculate its expected
+award.
 
 Iterate to tolerance; expected 1–2 effective rounds because loyalty damps
 best-response (PRD §4). Always cap iterations and log the trajectory —
@@ -588,6 +637,9 @@ not select their algorithms in advance.
 
 ## T7. Evaluation harness and thesis gate (§8, §9a)
 
+- The gate models share coach, race/roster-version, centered-descriptor
+  matchup, baseline race draw, global scoring, and scoring×flexibility terms.
+  The challenger adds only the hierarchical race×treatment response block.
 - One harness, two split policies: leave-whole-**event**-out (milestone 1
   yardstick, predates pack annotation) and leave-whole-**pack**-out
   (milestone 2 gate and everything after). The split key is data, not code:
@@ -601,13 +653,24 @@ not select their algorithms in advance.
   packs (resample packs, not matches — packs are the exchangeable unit),
   80% CI excluding zero; plus winrate-MAE improvement; plus the coefficient
   sign checks, operationalized as posterior probabilities with thresholds
-  fixed in `eval/GATE.md` (stunty × skill-grant generosity > 0; λ < 0 per
-  T5.4 — the λ check is binding only if the power rehearsal shows it is
-  identified at pack-level N, else advisory, per §9a).
+  fixed in `eval/GATE.md` (stunty × skill-grant generosity > 0). The shared
+  λ < 0 signature from T5.4 is reported only as advisory model validation;
+  it cannot make the treatment-schema gate pass.
 - Known-case anchors (§9a): each anchor compiles to a signed delta —
   challenger minus baseline predicted performance for the named race,
   averaged over held-out packs meeting the anchor's treatment condition —
   reported as a table in the gate report. Advisory, not binding.
+- Heterogeneity diagnostic (§9a): fit `b[p,r] ~ N(0, τ_raw)` on top of the
+  baseline and `b[p,r] ~ N(0, τ_residual)` on top of the challenger, with a
+  sum-to-zero constraint across active races within each pack and non-centered
+  parameterization. Predeclare a simulation-calibrated practical threshold
+  `ε`; report `P(τ_raw > ε)`, intervals for both scales, and
+  `P(τ_residual < τ_raw)`. A descriptive
+  `1 − τ_residual²/τ_raw²` may be reported with its posterior uncertainty but
+  is not a causal R². Where packs span multiple events, add within-pack
+  held-event repeatability checks. These fits are diagnostic only: free
+  effects for an unseen pack collapse to zero and cannot change the binding
+  gate verdict.
 - Training corpus: baseline and challenger must be fit on the same corpus
   for the paired comparison to isolate the pack×race terms — the
   milestone-1 full-corpus baseline is a yardstick only, never the gate
@@ -619,7 +682,7 @@ not select their algorithms in advance.
   known-case anchor list (§9a). The gate report links to the commit
   hash.
 - **Power rehearsal precedes pre-registration**: the simulation study
-  (T5.6.5) — data generated with known pack effects at realistic size —
+  (T5.6.6) — data generated with known pack effects at realistic size —
   estimates the gate's detection power under candidate criteria. The
   simulated generative process includes the monotone budget structure
   (T4.3), including a correlated-levers scenario (budget correlated with
@@ -640,8 +703,9 @@ not select their algorithms in advance.
   gates its register entry: opponent-experience (residuals vs. opponent's
   prior exposure, matches against high-gimmick races), coach-style
   (per-coach residuals vs. opponent descriptors, high-volume coaches
-  only), and pack-dependent matchup misses (M11.1). All such probes use
-  held-out posterior-predictive residuals from the existing event- or
+  only), pack-dependent matchup misses (M11.1), and residual symmetric
+  race-pair draw structure after T5.4's additive race effects. All such
+  probes use held-out posterior-predictive residuals from the existing event- or
   pack-level folds, with uncertainty or detectable-effect limits reported.
   In-sample residual silence is not grounds for retiring a registered
   feature.
@@ -659,15 +723,16 @@ results. Review against this list before trusting any fitted model.
 4. Putting pack-global, era-global, region, or event-type covariates in η —
    they cancel and are unidentified; the sampler will return prior noise
    that downstream code then "interprets".
-5. Descriptor main effects in the matchup term — redundant with race
-   baselines; produces unstable, uninterpretable posteriors for both.
-6. Using current NAF Glicko ratings (or any not-strictly-lagged feature) —
-   future leakage that inflates every validation metric.
+5. Descriptor main effects or uncentered descriptors in the matchup term —
+   either lets M duplicate race baselines and destabilizes both posteriors.
+6. Feeding NAF Glicko into the primary model, or materializing coach strength
+   outside the applicable evaluation mask — double use or future leakage that
+   inflates validation metrics.
 7. Random match splits, or splitting a pack's events across train/test —
    leaks pack identity; the gate becomes meaningless.
-8. Free race×pack interaction terms instead of race×treatment-vector terms —
-   ~20 packs cannot identify them; hierarchical treatment interactions are
-   the design (§6, FR8).
+8. Free race×pack interaction terms used as the predictive challenger — they
+   cannot generalize to unseen packs. The only sanctioned free effects are the
+   centered, heavily pooled, diagnostic-only variance fits in T7.
 9. Zero-coding races absent from an era instead of structural missingness.
 10. Dropping mirror matches or quarantined rows silently.
 11. Fitting the field model on squad events (EuroBowl) — different choice
@@ -691,6 +756,10 @@ results. Review against this list before trusting any fitted model.
     a held-out pack — preprocessing leakage that invalidates the fold.
 18. Training the field model on in-sample favorability, or retiring a
     deferred feature using in-sample residuals.
+19. Giving the challenger cutpoint terms absent from the baseline — the gate
+    must differ only by the race×treatment response block.
+20. Fitting free race-pair draw effects in v1 rather than first testing the
+    held-out residual structure after hierarchical additive race effects.
 
 ## T9. Work breakdown
 
@@ -707,8 +776,8 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | W4 | Tourplay reconnaissance: ToS/rate-limit check, ruleset availability survey | W1 | Written go/no-go note on scraping; sample rulesets cached |
 | W5 | Volume report → FR3 decision (BB2025-only vs. pooling) | W3 | Owner signs the decision; recorded in PRD or a decision log |
 | W6 | Descriptor schema v0 + hand-authored descriptor tables (FR8a); per-race budget breakpoint tables (T4.3) | W2 | YAML validates; one-page rationale per descriptor; breakpoint thresholds carry roster-math rationale |
-| W7 | Match model core: likelihood, η builder, invariance tests of T5.6 (1–4) | W2 | Property tests pass; parameter recovery on toy data |
-| W8 | Baseline model fit (coach + race[roster_version] + descriptor matchup) | W3, W6, W7 | Convergence gates pass on full data |
+| W7 | Match model core: likelihood, η/c builders, invariance tests of T5.6 | W2 | Property tests pass; parameter recovery on toy data |
+| W8 | Baseline model fit (masked coach + race[roster_version] + centered-descriptor matchup + shared cutpoints) | W3, W6, W7 | Convergence gates pass on full data |
 | W9 | Eval harness with leave-event-out policy; baseline yardstick report | W8 | Yardstick metrics published in a report notebook |
 
 ### Milestone 2 — thesis gate
@@ -720,8 +789,8 @@ are listed; anything not listed as a dependency can proceed in parallel.
 | W12 | Annotate packs; double-annotate 3–4 (LLM second pass w/ quoted evidence) | W10, W11 | All YAML validates; disagreement review written up |
 | W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; centering-invariance test (T5.6.3) passes |
 | W14 | Pre-register `eval/GATE.md`: criteria finalized using W15's power rehearsal, training-corpus decision, known-case anchor list (T7, §9a) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
-| W15 | Exploratory correlation pass (§9a; stunty scatter headline); simulation-based power rehearsal (T5.6.5); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
-| W16 | Challenger model (race×treatment, FR8c cutpoints) + leave-pack-out CV + gate report | W9, W13, W14 | Gate verdict + confound/connectivity appendix (T7) |
+| W15 | Exploratory correlation pass (§9a; stunty scatter headline); simulation-based power rehearsal (T5.6.6); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
+| W16 | Challenger model (shared baseline/cutpoints + race×treatment only) + leave-pack-out CV + gate report | W9, W13, W14 | Binding gate verdict + raw/residual heterogeneity diagnostic + confound/connectivity appendix (T7) |
 
 ### Milestone 3 — automated parsing (conditional on gate pass)
 
@@ -758,9 +827,10 @@ are listed; anything not listed as a dependency can proceed in parallel.
 - NAF data format and access path — blocks W3; everything downstream is
   written against the tidy tables, so the blast radius of surprises is
   confined to `ingest/naf.py`.
-- Whether BB2020 pooling is invoked and its exact era-adjustment structure —
-  decided at W5 per FR3; the roster-version keying (T3.2) is designed so
-  either answer slots in without schema change.
+- Whether BB2020 pooling is invoked is decided at W5 per FR3; BB2025-only
+  remains primary. If activated, T5.2 fixes the BB2025-reference structure;
+  W5 still chooses shrinkage, old-match downweighting, and sensitivity
+  settings. Roster-version keying (T3.2) lets either path use the same schema.
 - Gate training corpus — matched annotated-only corpora vs. full corpus
   with treatment terms active only where annotated (PRD §10). Decided at
   W14, before `eval/GATE.md`; the power rehearsal (W15) simulates whichever

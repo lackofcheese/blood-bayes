@@ -119,7 +119,8 @@ resources a pack grants each race. Candidate features:
 - inducement access (e.g. discounted Master Chef)
 - games count, resurrection vs. progression
 - tournament scoring system (win/draw points, TD/CAS bonus points) —
-  pack-global rather than per-race; enters the model per FR8c
+  pack-global rather than per-race; enters the behavioral draw model per
+  FR8c, while v1 favorability includes base W/D/L result points only
 
 This is the comparability layer that lets one model train on all tournaments
 and generalize to unseen packs.
@@ -135,13 +136,16 @@ and generalize to unseen packs.
   milestone 1. If pooling is needed: the 2020→2025 change is per-race
   (rosters rewritten; some races exist in only one edition), so a single
   scalar era offset is insufficient. Design: pooled model with hierarchical
-  race×era offsets — BB2020 effectively informs the prior for BB2025 race
-  baselines, with per-race deviations where the roster changed materially.
+  race×era offsets, parameterized with BB2025 as the reference and
+  hierarchical per-race BB2020 deviations. BB2020 thereby informs BB2025
+  race baselines without making the fallback part of the primary plan.
   Era-dependence is keyed per race as *roster version* (see FR8a), not as
   global sub-eras; a global era covariate carries only environment-wide
   changes. Sensitivity check: refit with BB2020 downweighted; if conclusions
   shift, weaken pooling. Races absent in an era are simply structurally
-  missing, not zero-coded.
+  missing, not zero-coded. Location constraints apply across the
+  contemporaneously comparable races active in each rules edition, never
+  within a single race's roster-version key.
 
 ### 7.2 Pack parsing
 - FR4: Represent any pack as a per-race treatment vector (schema TBD,
@@ -161,7 +165,7 @@ and generalize to unseen packs.
   §10); ingestion carries these columns from day one where present, but the
   v1 model remains ordinal W/D/L regardless.
 - FR8: Components: race baseline; matchup structure (descriptor-based first,
-  optional learned low-rank residual later — see FR8a); coach rating fit
+  optional learned low-rank residual later — see FR8a); coach strength fit
   from match history (see FR8b); coach×race familiarity; race ×
   treatment-vector interactions with hierarchical pooling.
 - FR8a: Matchup descriptors are hand-authored continuous race attributes in
@@ -174,34 +178,48 @@ and generalize to unseen packs.
   learned embeddings early. Descriptor rows are keyed per race × roster
   version (BB2020 launch, post-rework variants, BB2025), since rosters were
   rewritten between editions and some changed mid-era. The descriptor set is
-  a small versioned schema alongside the treatment vector. A learned low-rank residual on top of the descriptor
-  main effect is the planned upgrade path if data volume supports it
+  a small versioned schema alongside the treatment vector. A learned low-rank
+  residual on top of the descriptor matchup term is the planned upgrade path
+  if data volume supports it
   (milestone 4); the two compose rather than compete. Descriptor authoring
   follows the same double-annotation discipline as pack annotation
   (independent second pass, reconciliation); values may be data-informed
   under informative priors centered on the hand-authored values — protocol
-  in TECHNICAL.md (T5.5), frozen before the milestone-2 gate.
-- FR8b: Coach strength — NAF publishes per-coach×race Glicko ratings
-  (mu/phi, monthly rating periods, rank displayed as mu − 2.5·phi, inactive
-  above phi 100, new-race mu seeded from the coach's other races). Not used
-  as-is: (a) per-race mu absorbs race and pack strength, double-counting the
-  effects we're trying to isolate; (b) ratings are unadjusted for ruleset;
-  (c) using current ratings for past matches leaks future information. Coach
-  ability is fit jointly inside the model as a latent skill. NAF Glicko
-  mu/phi may serve as a time-lagged prior/initialization (rating as of
-  tournament start only) and as the cold-start fallback for sparse coaches.
-  Time variation: milestone 1 uses a static per-coach latent; the planned
+  in TECHNICAL.md (T5.5), frozen before the milestone-2 gate. Before entering
+  the bilinear matchup term, descriptor columns are centered over a stored,
+  uniform reference distribution of races active in the relevant rules
+  edition. BB2020 and BB2025 use separate stored references if pooling is
+  activated. This forces the matchup matrix to carry cyclic/pair-specific
+  structure rather than a second transitive race-strength scale; projected
+  field popularity never defines the centering weights.
+- FR8b: Coach strength is fit jointly from match history as a zero-centered
+  hierarchical latent, alongside race, matchup, pack, and familiarity
+  effects. NAF Glicko is not an input or prior: it is a lossy coach×race
+  summary of largely the same outcomes, unadjusted for ruleset, and using it
+  alongside the underlying matches risks double use and leakage. Retain it
+  only as an external benchmark; using otherwise unavailable pre-dataset
+  history would require a separate later decision. Every evaluation mask
+  reconstructs coach strength from permitted matches only: leave-pack-out
+  for the thesis gate, leave-event-out for event validation, and strictly
+  pre-cutoff history for prospective forecasts. New coaches receive the
+  population prior; sparse coaches shrink toward it with appropriately wide
+  posterior uncertainty, which is propagated through predictions. Time
+  variation: milestone 1 uses a static per-coach latent; the planned
   upgrade (milestone 4) is piecewise-constant ability per calendar year with
   a random-walk prior between years (pooled innovation variance), which
   collapses to static where a coach's data is thin. The thesis gate is
   fairly robust to this choice — baseline and challenger share the coach
   term, so drift bias largely cancels — but a sensitivity check that gate
   conclusions survive the upgrade is required.
-- FR8c: Scoring-system effects. Tournament scoring (win/draw points, TD/CAS
-  bonus points) enters the match model through two channels:
-  (a) a global effect on draw propensity — a shift in the ordinal model's
-  cutpoints (cheap, clearly identified); (b) a race-dependent response via a
-  scoring-incentive × strategic-flexibility (FR8a) descriptor interaction —
+- FR8c: Draw propensity and scoring-system effects. At reference scoring,
+  symmetric hierarchical race/roster-version effects allow races to differ
+  in baseline draw tendency. Their mean is linked to centered strategic
+  flexibility, with a residual for other race-level mechanisms; remaining
+  symmetric race-pair draw structure is a held-out diagnostic, not a free v1
+  parameter. Tournament scoring (win/draw points, TD/CAS bonus points) then
+  enters through two additional cutpoint channels: (a) a global shift in draw
+  propensity; (b) a race-dependent response via a scoring-incentive ×
+  strategic-flexibility (FR8a) descriptor interaction —
   not free race×scoring terms, which ~20 packs cannot identify. Mechanism:
   races differ in their *agency* to act on scoring incentives — a team that
   controls tempo can push for a win at the risk of accepting a higher chance
@@ -219,11 +237,12 @@ and generalize to unseen packs.
   de-prioritized; primary use assumes a known or historical coach pool
   (e.g. last edition's attendees).
 - FR9a (refinement): favorability input to FR9 is field-conditional —
-  matchup-weighted expected per-game tournament points under the pack's
-  scoring system vs. the currently projected field, not isolated race
+  matchup-weighted expected per-game **base result points** under the pack's
+  W/D/L scoring vs. the currently projected field, not isolated race
   strength. (Points, not raw winrate: draws are frequent and packs weight
-  them differently; the W/D/L model plus the annotated scoring rules give
-  expected points directly.) Solved by fixed-point iteration (project field →
+  them differently.) TD/CAS and other performance bonuses are excluded until
+  a validated margin/bonus model exists; bonus-bearing packs must expose that
+  omission in output metadata. Solved by fixed-point iteration (project field →
   recompute favorability → update picks; expected to converge in 1–2 rounds).
   Captures counter-picking (e.g. Humans rising in elf-heavy metas).
 - FR9b (refinement): meta-pressure features — low-dimensional summaries of the
@@ -385,8 +404,11 @@ requirements any candidate list must satisfy:
   acceptable) to catch systematic misreads.
 
 ### Test protocol (pre-registered before fitting)
-- Baseline: coach + race + matchup + era. Challenger: + race×treatment
-  interactions with hierarchical pooling.
+- Baseline: coach + race + matchup + era plus the complete shared cutpoint
+  model (race draw propensity, global scoring effect, and
+  scoring×flexibility response). Challenger: the identical model plus only
+  race×treatment interactions with hierarchical pooling. This isolates the
+  treatment schema: no cutpoint term may improve only the challenger.
 - Evaluation: **leave-whole-pack-out** CV (matches the unseen-pack use case;
   random match splits leak pack identity).
 - Pass criteria fixed in advance, with magnitude — a bare "improves" would
@@ -400,14 +422,13 @@ requirements any candidate list must satisfy:
   paired log-loss differences (challenger − baseline); pass requires (a) the
   bootstrap 80% CI of the mean difference excludes zero, (b) per-race
   winrate MAE also improves, and (c) interaction coefficient signs are sane
-  (e.g. stunty performance rises with skill-grant generosity; under
-  win-rewarding scoring, high-flexibility races shift probability mass from
-  D to both W and L — the FR8c signature). Sign checks are operationalized
+  within the challenger-only race×treatment block (e.g. stunty performance
+  rises with skill-grant generosity). Sign checks are operationalized
   as posterior-probability thresholds fixed in `eval/GATE.md` (e.g.
   P(correct sign) ≥ 0.9), not posterior-mean signs. The FR8c λ check is
-  binding only if the power rehearsal shows λ is identified at N≈20 packs —
-  T5.5 expects the prior to dominate there — otherwise it is reported as
-  advisory and the binding sign check is stunty × generosity alone. With
+  always advisory model validation because λ is shared by baseline and
+  challenger; the binding sign check concerns the race×treatment block
+  (e.g. stunty × generosity) alone. With
   N≈20 packs this is deliberately a lenient-but-nonzero bar; the point is
   fixing it before fitting so a marginal result can't be argued past.
 - Cheap exploratory pass to run first: rough correlations of per-race
@@ -463,10 +484,17 @@ all vary within the corpus).
 ### Interpreting a null
 - N=20 packs is the binding constraint (not match count); a null is
   ambiguous between "pack effects don't matter" and "schema v0 missed the
-  levers." Disambiguate via residual analysis: which packs does the baseline
-  miss worst, and are those misses explainable by un-encoded rules? A failed
-  gate still yields the annotated corpus, the baseline model, and schema v1
-  requirements.
+  levers." Disambiguate with a diagnostic-only, heavily pooled free
+  pack×race variance component: fit it once on top of the baseline to estimate
+  raw pack-associated race heterogeneity and again on top of the treatment
+  challenger to estimate what remains after schema v0. Center effects across
+  active races within each pack; predeclare a simulation-calibrated practical
+  threshold rather than testing variance exactly equal to zero. Report
+  repeatability across events sharing a pack where possible, plus connectivity
+  and confound checks. Free effects cannot predict an unseen pack and cannot
+  pass or soften the binding gate; they only distinguish little heterogeneity
+  from heterogeneity the schema failed to explain. A failed gate still yields
+  the annotated corpus, baseline model, and schema v1 requirements.
 
 ## 10. Risks and open questions
 
@@ -477,12 +505,11 @@ all vary within the corpus).
   encode? (Resolved empirically at milestone 2.)
 - NAF data access: expected via NAF contacts (format TBD). The data request
   should explicitly ask for: per-match TD/CAS counts (see FR7), coach NAF
-  numbers (not names only), tournament metadata, and whether historical
-  monthly Glicko snapshots exist. Contingency: if no snapshot history is
-  available, the FR8b Glicko prior is dropped in favor of pure hierarchical
-  pooling — never approximated with current ratings (leakage). Tourplay
-  likely requires scraping — check ToS and rate limits before building the
-  importer.
+  numbers (not names only), and tournament metadata. Historical Glicko may be
+  retained separately for benchmarking or evidence of otherwise unavailable
+  pre-dataset history, never as a second use of outcomes already in the match
+  likelihood. Tourplay likely requires scraping — check ToS and rate limits
+  before building the importer.
 - Tourplay↔NAF linkage: not needed for the core pipeline (NAF = results,
   Tourplay = rulesets, per §2). It resurfaces at milestone 4, where
   roster-level features require joining Tourplay rosters to NAF match
@@ -500,8 +527,9 @@ all vary within the corpus).
   diagnostic.
 - Matchup sparsity: rare race pairs may not support even low-rank structure;
   fall back to descriptor-based interactions.
-- Coach rating cold-start for new coaches (mitigation: hierarchical prior;
-  NAF Glicko as fallback where available, per FR8b).
+- Coach-strength cold-start for new coaches: use the hierarchical population
+  prior and propagate its wide uncertainty; do not substitute a fixed rating
+  (FR8b).
 - EuroBowl generalization: its field is elite and squad-constrained; models
   validated there may not transfer to open tournaments, and vice versa. Keep
   event type (open vs. squad) as an explicit covariate/segment.

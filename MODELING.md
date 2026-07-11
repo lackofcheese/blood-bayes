@@ -27,17 +27,17 @@ version; this is the authoritative table.
 | c | draw half-width; the ordinal cutpoints are (−c, +c); symmetric under side swap | T5.1, T5.4 |
 | s(side) | one side's strength contribution to η = s(A) − s(B) + m(r_A, r_B) | T5.2 |
 | θ_i | latent ability of coach i | T5.3 |
-| μ_i, σ_θ | prior mean of θ_i (Glicko-derived where available) and pooled SD | T5.3 |
-| δ | loading of the standardized, strictly-lagged Glicko mu on μ_i | T5.3 |
-| α_{r,v} | baseline of race r at roster version v; sum-to-zero within each version block | T5.2 |
+| σ_θ | pooled SD of zero-centered coach ability | T5.3 |
+| α_{r,v} | baseline of race r at roster version v; centered across contemporaneously comparable races | T5.2 |
 | z_{p,r} | treatment vector of pack p for race r, derived per T4.2 (centered, standardized) | T5.2 |
 | γ_r, γ̄, Σ_γ | race r's treatment-response coefficients; hierarchical mean and covariance | T5.2 |
 | f, ψ, n_{i,r} | familiarity f = ψ·log(1 + n_{i,r}); n = coach i's strictly-prior games with race r | T5.3 |
-| m(r_A, r_B) | matchup term x_A′ M x_B | T5.5 |
-| x_r | descriptor vector of race r at its roster version (FR8a) | T5.5 |
+| m(r_A, r_B) | matchup term x̃_A′ M x̃_B | T5.5 |
+| x_r, x̃_r | raw and edition-reference-centered descriptor vectors of race r at its roster version | T5.5 |
 | M, τ | skew-symmetric matchup matrix (M = −M′); shrinkage scale of its entries | T5.5 |
 | c0, κ, λ | cutpoint base level; draw-propensity shift; flexibility interaction | T5.4 |
-| s_p | win-incentive scalar of pack p's scoring system, standardized | T5.4 |
+| d_{r,v}, β_flex, u_{r,v} | race draw propensity; flexibility main effect; residual race draw effect | T5.4 |
+| s_p | win-incentive scalar of pack p's scoring system, standardized and reference-centered | T5.4 |
 | flex_r | strategic-flexibility descriptor of race r (FR8a) | T5.4 |
 | U(n, r) | field-model choice utility of coach n for race r | T6.1 |
 | β_loy, β_pop, β_fav | choice-model coefficients: loyalty, popularity, favorability | T6.1 |
@@ -61,10 +61,14 @@ that keeps draws first-class.
 
 A subtler reason to model the *outcome* rather than tournament *points*:
 packs score outcomes differently (2/1/0, 3/1/0, bonus points). Fitting on
-outcomes and applying the pack's scoring afterwards (as T6.2 does for
-expected points) lets one fitted model serve every scoring system; fitting
+outcomes and applying the pack's base W/D/L scoring afterwards (as T6.2 does
+for expected base result points) lets one fitted model serve those result
+scales; fitting
 on points would bake each pack's scoring into the response and destroy
 cross-pack comparability — the same mistake as trusting tier labels (§6).
+TD/CAS bonuses require a conditional margin distribution and are explicitly
+outside v1 favorability; their rules can describe incentives in T5.4 without
+magically supplying expected bonus awards.
 
 **The latent-difference structure.** Match outcome depends on *relative*
 strength, so the model is built on a scalar advantage η = s(A) − s(B) +
@@ -85,10 +89,9 @@ antisymmetric location — is exactly the Rao–Kupper (1967) ties extension
 of Bradley–Terry: P(A wins) = π_A/(π_A + ν·π_B) with η = log(π_A/π_B) and
 c = log ν. So "why logistic" has a lineage answer: it *is* the canonical
 paired-comparison-with-draws model, the same family chess and go rating
-systems (Elo in its logistic form, Glicko) live in. That matters
-practically here: the FR8b prior maps a (standardized) Glicko mu onto μ_i,
-and keeping θ on a logistic log-odds scale makes that mapping a single
-scale factor δ rather than a link-function mismatch.
+systems (Elo in its logistic form, Glicko) live in. Here coach strength is
+inferred directly on that same logistic log-odds scale from the underlying
+matches, without importing an external rating summary.
 
 Substantive fit: the logistic has heavier tails than the probit's normal.
 Blood Bowl outcomes are dice-dominated — even a huge skill gap leaves a
@@ -144,7 +147,7 @@ c must be positive (the cutpoints −c < +c must stay ordered). The two
 standard positivity transforms are exp and softplus; T5.4 uses softplus
 and both are acceptable. Reasons for the default:
 
-- Away from zero, softplus is approximately linear, so the κ and λ
+- Away from zero, softplus is approximately linear, so the race, κ, and λ
   covariate effects read as roughly *additive* changes to the draw
   half-width. Under exp they become multiplicative and interact with each
   other and with c0 — an effect size that means one thing for a low-draw
@@ -152,7 +155,8 @@ and both are acceptable. Reasons for the default:
   harder to report (FR11-style attribution wants "this scoring rule
   removes about this much draw mass").
 - exp's explosive right tail is a known source of bad HMC geometry when a
-  cutpoint scale interacts with hierarchical terms; softplus has bounded
+  cutpoint scale interacts with hierarchical terms such as `u_{r,v}`;
+  softplus has bounded
   gradient (σ) and no comparable failure mode. With ~20 packs identifying
   κ and λ, sampler robustness is worth more than elegance.
 - Near zero, softplus behaves like exp — a soft floor rather than a hard
@@ -164,6 +168,23 @@ and both are acceptable. Reasons for the default:
 The question: a team's agency to convert draws into decisive results is
 not necessarily *even* between W and L — is modeling it only through
 cutpoints a simplification?
+
+**Baseline draw tendency and incentive response are distinct.** A race's
+ability to control tempo or manufacture a late chance plausibly sits upstream
+of both its ordinary draw rate and how strongly it responds when a pack makes
+wins more valuable. T5.4 represents those different contrasts as
+`β_flex·flex_r` in baseline race draw propensity and
+`λ·s_p·(flex_A+flex_B)` as the across-pack scoring response. This is not
+double use: one is the intercept at centered reference scoring and the other
+is a slope as scoring changes. The hierarchical residual `u_{r,v}` retains
+other race-level mechanisms that flexibility does not explain.
+
+Additive race effects still do not assert that all draw structure belongs to
+the individual races. Some particular style pairings may be unusually drawish
+after accounting for each participant. A held-out symmetric pair-residual
+probe tests that possibility; a tightly regularized symmetric descriptor
+interaction is the preferred extension if the signal is real, rather than a
+free effect for every sparse pair.
 
 **What the cutpoint channel already does.** Shrinking c vacates draw mass,
 but the split of that mass is not fixed at 50/50 — it follows the current
@@ -232,10 +253,16 @@ made deliberately: v1 accepts the bias of a low-dimensional mechanistic
 model to get estimable, interpretable structure; the milestone-4 low-rank
 residual (T5.5) is the variance side, added only if data volume earns it.
 
-**Why no descriptor main effects.** They are already inside α — races
-have free baselines, so a w·(x_A − x_B) term is a reparameterization of
-nothing, and fitting both just makes two posteriors fight (T8.5). The
-matchup term carries only what α cannot: interactions.
+**Why centering is required in addition to skew-symmetry.** They are already
+inside α — races have free baselines, so an explicit `w·(x_A−x_B)` term is
+redundant. Less obviously, an uncentered skew-symmetric bilinear form can
+itself induce a transitive matrix approximately equal to `v_A−v_B`, making M
+and α fight despite the absence of an explicit main effect. Center descriptor
+columns over the stored uniform edition reference before applying M. Then the
+induced matchup matrix satisfies `C·w=0` (`C·1=0` under uniform weights), so
+its weighted average effect for every race is zero and α retains the general
+strength scale. Projected popularity is deliberately not the reference: that
+would make the meaning of intrinsic race strength move with each forecast.
 
 **Pack-invariance of M is a v1 simplification.** In reality the matchup
 geometry itself is pack-dependent: rule levers reshape specific pairings
@@ -247,14 +274,23 @@ sketch in M11.1.
 
 ## M8. Coach terms, and the deferred opponent-experience variant
 
-**Why a jointly-fit latent, not NAF Glicko as a covariate.** FR8b's three
-reasons, restated causally: NAF mu is per coach×race, so it has already
-absorbed race strength and historical pack treatment — using it as a
-feature re-imports the effects this model exists to isolate; it is
-unadjusted for ruleset; and current ratings encode the very outcomes
-being predicted (leakage). As a strictly-lagged, within-race-standardized
-*prior mean* it contributes only what is safe: a head start on ranking
-coaches relative to peers on the same race.
+**Why a zero-centered jointly fit latent, not NAF Glicko.** NAF mu is a
+coach×race summary of largely the same match outcomes available here. It has
+already absorbed race strength and historical pack treatment, is unadjusted
+for this model's ruleset and matchup structure, and can leak future outcomes.
+Using it as a prior while also fitting the underlying matches reuses evidence
+unless that dependence is modeled. Directly inferring `θ_i ~ N(0,σ_θ)` is
+cleaner: race, matchup, treatment, and coach effects are separated jointly,
+while sparse and new coaches shrink to a population distribution with honest
+uncertainty. Glicko remains useful as an external benchmark, not an input.
+
+**Masking defines the coach-strength estimand.** The latent is reconstructed
+inside each evaluation boundary: exclude the held-out pack for the thesis
+gate, the held-out event for event validation, and all on-or-after-cutoff
+matches for a prospective forecast. A retrospective pack test may use other
+matches later in calendar time because it asks a different question, but it
+must not be described as a historical forecast. Predictions integrate over
+the coach posterior rather than treating a displayed mean rating as known.
 
 **Why the familiarity curve is ψ·log(1+n).** The mechanism is a learning
 curve: the first few games with a race teach the most (what the pieces
@@ -312,6 +348,24 @@ also the honest epistemic position: absent much data on a race, the best
 guess for its response is the generic one, not zero and not a free
 parameter.
 
+**Why every nuisance term is shared at the gate.** The gate exists to decide
+whether automating the treatment schema is justified. Baseline race draw
+propensity and the two scoring cutpoint terms may improve prediction, but they
+do not validate `γ`. Therefore baseline and challenger both contain the full
+cutpoint and non-treatment model, and the challenger adds only `γ_r·z_{p,r}`.
+The scoring×flexibility sign remains a useful model check, but cannot pass a
+gate whose downstream investment is the treatment parser.
+
+**Why a free pack×race model exists only as a variance diagnostic.** A
+heavily pooled `b_{p,r}` can estimate whether observed packs carry meaningful
+race-specific heterogeneity without claiming to know its cause. Fit
+`baseline+b` for raw variance and `challenger+b` for residual variance after
+the schema, with each pack's effects centered across active races. Because
+`b` for a new pack has no evidence and collapses to zero, this model cannot
+replace the treatment challenger or affect its binding gate. Its purpose is
+to distinguish "little heterogeneity" from "schema missed existing
+heterogeneity," with repeat-event checks and confound caveats where data allow.
+
 **Why budget is monotone-discrete** (full specification T4.3, motivation
 §6). Two structural facts about the game, not modeling conveniences:
 roster math is threshold-like — at a specific TV a race can afford a
@@ -365,6 +419,7 @@ stated condition.
 | Opponent-race experience: ψ₂·log(1 + coach's prior games *against* r_opp), likely interacted with a gimmickiness descriptor | Gimmick races (Vampires, Slann, stunties) tax opponent knowledge; the edge decays with exposure | Near-collinear with θ and α under proportional exposure; needs an extra descriptor or per-race ψ₂ to have teeth (M8) | The M8 residual probe (run with milestone-2 residual analysis) shows exposure-correlated residuals vs gimmick races |
 | Coach×matchup experience (games playing r_A vs r_B) | As above, plus own-race-specific counterplay knowledge | Strictly sparser than the vs-race version (~600 ordered pairs per coach) | vs-race term adopted and materially improving, with structured residual remaining |
 | Flexibility-difference scoring term in η: λ₂·s_p·(flex_A − flex_B) | Uneven draw agency — the side that can manufacture a late chance converts close games directionally (M6) | Identified only via cross-pack s_p variation (N≈20, same weakness as λ); theoretical sign not certain | Corpus growth past milestone 3 *and* the power rehearsal showing pack-level scoring terms identified |
+| Symmetric race-pair draw interaction in c | Some style combinations may be more or less drawish than the sum of each race's baseline tendency (M6) | Free pair effects are sparse; T5.4's flexibility-linked hierarchical race effects take the estimable first pass | Held-out residual draw rates retain symmetric descriptor-structured pair signal; revive as a tightly regularized symmetric descriptor interaction |
 | Pack-modulated matchups M(p) — design sketch in M11.1 | Pack levers reshape specific matchups through the builds they enable (stacking → Tackle/Mighty Blow stacks preying on dodge-reliant teams) | v1's γ already carries the field-average of the effect; the matchup-specific remainder needs within-pack contrasts ~20 packs can't spare, and must be centered against γ to be separable (M11.1) | Build-response study (W23) passes + milestone-3 corpus, alongside W27; earlier if gate residuals show pack-dependent matchup misses |
 | Coach-style descriptors × opponent descriptors (labeled or latent) | Coaches have persistent playstyles and style-specific weaknesses (e.g. struggles against fast agile teams) | No labeling source at corpus scale; the latent version is a per-coach embedding — data is thin for all but the most active coaches, and shrinkage would zero it exactly where it can't be checked | Residual probe on high-volume coaches (per-coach baseline residuals vs. opponent descriptor vector) shows heterogeneous structure |
 | Coach×coach terms | Style or psychological matchups between specific coach pairs | Hopeless sparsity — most coach pairs ever meet a handful of times; any real signal is better routed through coach-style descriptors (row above) | None as a direct term; subsumed by the coach-style row |
