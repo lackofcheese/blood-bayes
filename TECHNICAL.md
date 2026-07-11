@@ -172,16 +172,20 @@ Normalization decisions to fix once, in code:
   grant "N skills", some grant budget spendable on skills — convert both to
   counts of primary/secondary equivalents, and record the conversion rule in
   the annotation guide).
-- Continuous features are standardized (z-scored over the annotated pack
-  corpus) before entering the model; store the standardization constants
-  with the fitted model so new-pack queries use the same scaling.
+- Continuous features are standardized before entering the model. During
+  evaluation, fit centering and scaling constants on the training packs in
+  each fold only; the held-out pack is transformed with those constants and
+  never contributes to them. The final production fit uses the full training
+  corpus. Store the applicable constants with every fitted model artifact so
+  new-pack queries use the same scaling.
 - Effective gold budget is **not** a continuous linear feature — it has its
   own monotone-discrete structure, specified in T4.3.
 - **Centering for identifiability**: the race baseline α_r absorbs any
   constant shift in that race's treatment across packs. Either center each
   race's treatment features over the pack corpus, or document that α_r means
   "baseline at corpus-average treatment for this race". Pick the first — it
-  makes attribution outputs (FR11) read cleanly as deviations.
+  makes attribution outputs (FR11) read cleanly as deviations. As with
+  scaling, evaluation-fold centering uses training packs only.
 
 ### T4.3 Budget: monotone discrete effect (PRD §6)
 
@@ -192,9 +196,11 @@ structure.
 
 Gate stage (~20 packs):
 
-- **Grid**: the observed distinct TVs across the annotated corpus (in
+- **Grid**: the observed distinct TVs across the training corpus (in
   practice ~50k quanta). Pool adjacent levels occupied by fewer than ~2
-  packs.
+  packs. In leave-pack-out evaluation, construct the grid, occupancy counts,
+  and pooling decisions independently inside each fold; the held-out pack
+  must not affect them.
 - **Effect**: monotone step increments over the grid — scale × cumulative
   simplex weights — with per-race deviations hierarchically shrunk toward
   the global pattern. The race-specific *level* of any step function is
@@ -211,7 +217,11 @@ Gate stage (~20 packs):
   (piecewise-constant jump there), with proportional spread when the race
   has no breakpoint in that interval. Never interpolate linearly between
   grid points — that reintroduces the smooth-budget fiction this section
-  removes.
+  removes. If the query lies outside training support, do not extrapolate
+  additional increments: use the fitted contribution at the nearest support
+  boundary and return `support_status = below_training_support` or
+  `above_training_support`. Reports and APIs must surface the warning rather
+  than present the boundary value as an in-distribution estimate.
 - **Code contract**: the grid spec (cell edges + nesting map) is a
   parameter of the design-matrix/η builder, like θ's index set (T5.3) —
   the full-data upgrade below must be a configuration change, not a
@@ -505,6 +515,11 @@ U(coach n, race r) = β_loy · loyalty(n, r)  # e.g. log(1 + prior events with r
 - Race intercepts and popularity are near-collinear; if both are included,
   regularize and don't interpret them separately — or drop intercepts and
   let popularity carry it. Decide once, document in code.
+- Favorability on historical choice rows must be cross-fitted. At minimum,
+  fit the match model without the row's event before calculating that event's
+  favorability; use leave-pack-out predictions when measuring generalization
+  to unseen packs. Persist the split key with the generated feature so an
+  in-sample favorability value cannot be substituted accidentally.
 
 ### T6.2 Favorability fixed point (FR9a)
 
@@ -523,20 +538,26 @@ Iterate to tolerance; expected 1–2 effective rounds because loyalty damps
 best-response (PRD §4). Always cap iterations and log the trajectory —
 convergence failure is diagnostic information, not an exception to swallow.
 
-Uncertainty propagation for FR10: run the whole fixed point per posterior
-draw (thinned, e.g. 200 draws), not once at the posterior mean. The
+Uncertainty propagation for FR10: run the whole fixed point over joint draws
+from both the match-model posterior and the field-choice coefficient
+posterior (thinned, e.g. 200 draws), not once at either posterior mean. The
 favorability→field→favorability loop is nonlinear; the mean of the pipeline
 is not the pipeline of the mean, and the headline output's intervals (FR10)
-must reflect match-model uncertainty flowing through field projection.
+must reflect uncertainty from both models flowing through field projection.
 
 ### T6.3 Equilibrium diagnostic (FR12)
 
 Same payoff machinery, loyalty term removed, solved by **fictitious play**
 (best-respond to the *running average* field, not the last iterate). Raw
-best-response on an intransitive payoff matrix cycles; fictitious play's
-average converges to a mixed equilibrium and cycling manifests as mixing —
-this is the intended behavior, per the PRD. Multi-start (different initial
-fields) to detect non-uniqueness; report all distinct limits found.
+best-response on an intransitive payoff matrix can cycle. Under 2/1/0 result
+scoring the two-player payoff is constant-sum, so the running average has the
+standard fictitious-play convergence guarantee. Under 3/1/0 scoring, TD/CAS
+bonuses, or any other non-constant-sum utility, do not claim that guarantee.
+In every case report the payoff convention, convergence trajectory, regret or
+exploitability diagnostic, iteration cap, and multi-start results. Treat
+non-convergence as a valid diagnostic result; choose and document a fallback
+solver before supporting a non-constant-sum equilibrium in user-facing
+output.
 Implementation is ~50 lines on top of T6.2 — keep it in `equilibrium.py`,
 clearly labeled diagnostic-only, with the PRD's caveats attached to its
 output object rather than left to the UI layer to remember.
@@ -548,7 +569,22 @@ The upgrade is a Monte Carlo Swiss simulator (sample a field, simulate
 rounds with winners-meet-winners pairing, accumulate per-race results).
 Design the FR10 report to carry an explicit `pairing_assumption` field from
 day one so validation comparisons (§8) are never ambiguous about which
-assumption produced a number.
+assumption produced a number. Until the simulator exists, user-facing copy is
+"expected performance against the projected field under random pairing",
+not an unqualified "event winrate".
+
+### T6.5 Design-contract gates for FR11 and FR9c
+
+Before implementing FR11 attribution, commit a short estimand contract that
+defines the reference pack, the feature-change counterfactual, and whether
+the projected field is held fixed or recomputed. Attribution output is a
+predictive counterfactual under the fitted model, not a causal estimate.
+
+Before implementing FR9c, commit a short squad-model contract covering squad
+membership, no-duplicate constraints, captain-level utility, coach-to-race
+assignment, and how EuroBowl validation differs from open-event validation.
+These contracts are milestone prerequisites; this document deliberately does
+not select their algorithms in advance.
 
 ## T7. Evaluation harness and thesis gate (§8, §9a)
 
@@ -604,7 +640,11 @@ assumption produced a number.
   gates its register entry: opponent-experience (residuals vs. opponent's
   prior exposure, matches against high-gimmick races), coach-style
   (per-coach residuals vs. opponent descriptors, high-volume coaches
-  only), and pack-dependent matchup misses (M11.1).
+  only), and pack-dependent matchup misses (M11.1). All such probes use
+  held-out posterior-predictive residuals from the existing event- or
+  pack-level folds, with uncertainty or detectable-effect limits reported.
+  In-sample residual silence is not grounds for retiring a registered
+  feature.
 
 ## T8. Known failure modes (checklist for implementers)
 
@@ -647,6 +687,10 @@ results. Review against this list before trusting any fitted model.
 16. Treating budget as a linear feature, interpolating linearly between
     budget grid points at query time, or fitting free (non-monotone,
     unpooled) per-race breakpoints — the sanctioned structure is T4.3.
+17. Calculating centering, scaling, budget grids, occupancy, or pooling from
+    a held-out pack — preprocessing leakage that invalidates the fold.
+18. Training the field model on in-sample favorability, or retiring a
+    deferred feature using in-sample residuals.
 
 ## T9. Work breakdown
 
@@ -690,9 +734,9 @@ are listed; anything not listed as a dependency can proceed in parallel.
 
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
-| W19 | Field choice model v1 (loyalty + popularity + favorability) | W3, W16 | Held-out event field prediction beats popularity-only baseline |
-| W20 | Favorability fixed point + posterior-draw propagation (T6.2) | W19 | Convergence logged; intervals reflect posterior draws |
-| W21 | FR10/FR10a/FR11 report generator (random-pairing assumption, labeled) | W20 | End-to-end run on Eucalyptus Bowl pack |
+| W19 | Field choice model v1 (loyalty + popularity + favorability) | W3, W16 | Historical favorability is cross-fitted; held-out event field prediction beats popularity-only baseline |
+| W20 | Favorability fixed point + posterior-draw propagation (T6.2) | W19 | Convergence logged; intervals reflect joint match- and field-model posterior draws |
+| W21 | FR10/FR10a/FR11 report generator (random-pairing assumption, labeled) | W20 | FR11 estimand contract committed before implementation; end-to-end run on Eucalyptus Bowl pack |
 | W22 | Equilibrium diagnostic (FR12) | W20 | Multi-start non-uniqueness check implemented; caveats embedded in output |
 
 ### Milestone 4 — gated refinements
@@ -701,7 +745,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 |---|---|---|---|
 | W23 | Counter-pick study (gates FR9a interpretation) and build-response study (gates FR9b) | W3, W12 | Each a standalone write-up with a go/no-go |
 | W24 | Meta-pressure features in match model (FR9b) | W23 (a pass) | Held-out improvement or documented null |
-| W25 | Squad-event field model, validated on EuroBowl (FR9c) | W19 | EuroBowl field reproduced better than the open-event model applied naively |
+| W25 | Squad-event field model, validated on EuroBowl (FR9c) | W19 | FR9c squad-model contract committed before implementation; EuroBowl field reproduced better than the open-event model applied naively |
 | W26 | Tourplay↔NAF coach linkage + roster-level features | W17 | Linkage precision audited on a labeled sample |
 | W27 | Low-rank matchup residual (T5.5 upgrade) | W16 | Held-out improvement over descriptors-only, or documented null |
 | W28 | Swiss-pairing simulator for FR10 | W21 | Forecasts labeled with pairing assumption; delta vs. random-pairing reported |

@@ -289,13 +289,15 @@ exposure. Deferred from v1 on three grounds:
   per coach) and shouldn't be attempted before the vs-race version has
   shown signal.
 
-**The cheap gate before ever adding it:** a residual probe on the fitted
-baseline — among matches against high-gimmick races, do the model's
-residuals correlate with the opponent's prior exposure count to that
-race? This costs a group-by on quantities the leakage-safe data layer
-already computes (T5.3), needs no refit, and slots naturally into the
-milestone-2 residual analysis (§9a's null-interpretation pass). Signal
-there revives the feature (M11); silence retires it cheaply.
+**The cheap gate before ever adding it:** a residual probe on held-out
+posterior-predictive residuals — among matches against high-gimmick races,
+do residuals correlate with the opponent's prior exposure count to that
+race? Reuse the existing event- or pack-level folds and report uncertainty
+or detectable-effect limits. This costs a group-by on quantities the
+leakage-safe data layer already computes (T5.3), needs no refit, and slots
+naturally into the milestone-2 residual analysis (§9a's null-interpretation
+pass). Signal there revives the feature (M11); silence is evidence for
+retirement only at the power the held-out probe could actually achieve.
 
 ## M9. Treatment responses and the budget structure
 
@@ -338,9 +340,17 @@ E[points] rather than winrate because coaches optimize what the pack
 scores, and draws are frequent enough for the difference to matter. The
 equilibrium diagnostic (FR12) removes loyalty and must switch to
 fictitious play precisely because the payoff matrix is intransitive by
-construction (M7): raw best-response cycles, and averaging turns the
-cycle into the mixed equilibrium it orbits — which is the honest object
-to report.
+construction (M7): raw best-response can cycle. Averaged fictitious play
+has the standard convergence guarantee for the 2/1/0 constant-sum payoff;
+3/1/0 scoring, bonuses, and other non-constant-sum utilities instead require
+reported regret/exploitability and convergence diagnostics. Non-convergence
+is an informative result, not evidence that an equilibrium was found.
+
+FR11 attribution remains a predictive counterfactual under this fitted
+system. It may describe how the forecast changes when an encoded pack feature
+changes, but observational pack comparisons do not identify that change as a
+causal effect. The reference pack and fixed-versus-recomputed field estimand
+must therefore be declared before an attribution is produced.
 
 ## M11. Register of considered-and-deferred features
 

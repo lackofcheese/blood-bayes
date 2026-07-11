@@ -232,7 +232,9 @@ and generalize to unseen packs.
   elf share). Gated on the build-response study (see §9).
 - FR9c (later): squad-event variant of the field model (EuroBowl-type):
   constrained race assignment across a squad rather than independent
-  per-coach choice.
+  per-coach choice. Before implementation, freeze a short contract defining
+  squad membership, no-duplicate constraints, captain-level utility,
+  coach-to-race assignment, and the EuroBowl validation estimand.
 
 ### 7.4 Outputs
 - FR10: Headline output — for a given pack: per-race expected winrate vs.
@@ -241,20 +243,29 @@ and generalize to unseen packs.
   a later upgrade simulates Swiss rounds (winners meet winners, so matchup
   exposure correlates with performance — material for mid-table races).
   Validation comparisons against actual per-race winrates (§8) must note
-  which assumption is in effect.
+  which assumption is in effect. Until Swiss simulation exists, user-facing
+  aggregate output is labeled "expected performance against the projected
+  field under random pairing," not an unqualified "event winrate."
 - FR10a: Secondary output — race-vs-race matchup predictions at the
   individual-game level: W/D/L probabilities for any pairing under the pack,
   optionally conditioned on coach ratings (neutral-coach by default). These
   fall directly out of the match model; presented with uncertainty and
   without single-game accuracy claims (see non-goals).
-- FR11: Attribution: which treatment-vector features drive a race's
-  favorability under the pack.
+- FR11: Predictive attribution: which treatment-vector features drive a
+  race's favorability under the fitted model. Before implementation, freeze
+  an estimand contract defining the reference pack, feature-change
+  counterfactual, and whether field composition is held fixed or recomputed.
+  Default reports must not describe this observational-model output as a
+  causal effect.
 - FR12 (exploratory): equilibrium meta diagnostic — the FR9a machinery with
   the loyalty term removed, solved by fictitious play (averaged
   best-response) rather than raw iteration: loyalty is the damping term, and
   without it best-response on an intransitive payoff matrix can cycle;
-  under fictitious play cycling shows up as a mixed equilibrium instead of a
-  divergence. The result is read as a mixed-strategy field distribution —
+  fictitious play averages the cycling best responses. Under 2/1/0 result
+  scoring the payoff is constant-sum and the running average has the standard
+  convergence guarantee; 3/1/0 scoring, bonuses, and other non-constant-sum
+  utilities do not inherit that guarantee. The result, when convergence
+  diagnostics support it, is read as a mixed-strategy field distribution —
   the idealized fully-metagamed field for a pack — with a multi-start check
   for non-uniqueness. Outputs: (a) the equilibrium field itself
   (a balance target for TOs — tune rules for the attractor, not this year's
@@ -263,7 +274,9 @@ and generalize to unseen packs.
   any UI: equilibria may be mixed and non-unique (the payoff structure is
   intransitive by construction), and the result is an equilibrium of the
   *fitted* payoff matrix, inheriting its estimation uncertainty — a
-  diagnostic lens, not a prediction.
+  diagnostic lens, not a prediction. Report the payoff convention,
+  convergence trajectory, regret or exploitability, and iteration cap;
+  non-convergence is a valid result rather than an exception.
 - FR13: Delivery: the eventual consumer is a lightweight web UI. Deliberately
   unspecified beyond that at this stage — this is a hobby project, not a
   commercial product; milestone-2 outputs can live in notebooks/reports.
@@ -276,6 +289,16 @@ and generalize to unseen packs.
   Metrics: predicted vs. actual per-race winrates, log-loss, calibration.
   Exception: milestone 1's baseline yardstick predates pack annotation and
   uses whole-*event* holdout as the approximation.
+- Every learned preprocessing decision — including treatment centering and
+  scaling, budget grids, occupancy, and pooling — is fitted on training data
+  inside each evaluation fold. Any model-generated predictor used to train a
+  downstream model, including historical favorability, must be cross-fitted;
+  deferred-feature probes likewise use held-out posterior-predictive
+  residuals rather than in-sample residuals.
+- The milestone-2 pack corpus is deliberately contrast-rich for identifying
+  treatment effects. It is not assumed representative of ordinary deployment
+  tournaments, so gate performance must not be reported as general deployment
+  forecast accuracy without a separate representative validation set.
 - Gate (go/no-go for the pack thesis): pack × race interaction terms must
   improve held-out predictive performance over the baseline model
   (coach + race + matchup only). If they don't, stop before building the
@@ -286,9 +309,10 @@ and generalize to unseen packs.
 
 ## 9. Milestones
 
-1. **Data foundation** — NAF + Tourplay ingestion; tidy match table; baseline
-   model (coach + race + matchup) as yardstick. Includes the BB2025 volume
-   count that decides whether BB2020 pooling is needed (FR3).
+1. **Data foundation** — NAF ingestion; Tourplay reconnaissance and access
+   validation; tidy match table; baseline model (coach + race + matchup) as
+   yardstick. Includes the BB2025 volume count that decides whether BB2020
+   pooling is needed (FR3). The Tourplay importer belongs to milestone 3.
 2. **Thesis gate** — hand-annotated treatment vectors for ~20 packs; test
    whether pack×race terms add held-out predictive power. Detailed in §9a.
 3. **Automated parsing** — Tourplay importer; LLM extraction pipeline for PDF
@@ -297,7 +321,8 @@ and generalize to unseen packs.
    (a) build-response study — do Tackle/Mighty Blow counts per roster track
    the dodge-share of the actual field? gates FR9b; (b) counter-pick study —
    does Human/Dwarf pick share track elf pick share, controlling for pack
-   favorability? gates FR9a. Then: roster-level features from Tourplay
+   favorability? gates FR9a interpretation and adoption, not its earlier
+   implementation. Then: roster-level features from Tourplay
    rosters (requires Tourplay↔NAF coach linkage — see §10); squad-event
    field model validated against EuroBowl (FR9c); learned low-rank matchup
    embeddings if data volume supports them (FR8a); latent fine-resolution
