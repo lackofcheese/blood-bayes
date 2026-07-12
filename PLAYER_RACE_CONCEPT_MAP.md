@@ -1,9 +1,10 @@
 # Coach, race choice, and performance — conceptual map
 
-Status: informal discussion canvas. This is intentionally broader than the
-implemented model. Arrows mean "plausibly influences" rather than a formal,
-complete causal claim. The map may contain concepts that cannot be separately
-identified from NAF data.
+Status: supporting construct inventory. This broad map decomposes concepts
+that may be collapsed in either the canonical generative DAG or the fitted
+model. It is useful as an ontology and omission checklist, but it is not the
+primary account of event ordering or conditional structure. Many concepts in
+it cannot be separately identified from NAF data.
 
 The deliberately reduced statistical proposal inspired by this map is
 recorded separately in
@@ -13,13 +14,69 @@ The standalone rendered version is
 [player_race_concept_map.svg](diagrams/player_race_concept_map.svg); its
 editable source is [player_race_concept_map.dot](diagrams/player_race_concept_map.dot).
 
-A second, more staged overview incorporating the independent visual and
-conceptual reviews is available as
+A staged, time-ordered overview incorporating the independent visual and
+conceptual reviews is the **canonical gold-standard generative DAG**:
 [player_race_process_map.svg](diagrams/player_race_process_map.svg), with
-editable source at
-[player_race_process_map.dot](diagrams/player_race_process_map.dot). It keeps
-the original map as the broad inventory and uses the second map to clarify
-selection, tournament realisation, and time.
+editable source at [player_race_process_map.dot](diagrams/player_race_process_map.dot).
+It is a qualitative hypothesis about the data-generating process, used to
+reason about selection, measurement, omitted paths, and model reduction. It
+does not claim that every node is identifiable or should receive a parameter.
+
+![Gold-standard coach race-selection and tournament-performance DAG](diagrams/player_race_process_map.svg)
+
+## Canonical DAG semantics
+
+- Every arrow in the process DAG is a proposed direction in the generative
+  story, not merely an association. The DAG is still a domain hypothesis, not
+  proof that observational NAF data identify a causal effect.
+- All inputs to an event-`t` decision or outcome are available or realised no
+  later than that decision or outcome. Feedback terminates in explicit
+  round-`k+1` or event-`t+1` state, so the graph remains acyclic.
+- Attendance is a selection process before race choice. The rules pack may
+  affect who attends as well as what attending coaches choose.
+- **Actual pre-event coach–race preparedness** is an event-time composite of
+  portable ability, style aptitude, accumulated experience, hidden play, and
+  event-specific preparation. It is not a permanent coach×race essence.
+- Actual preparedness affects choice or assignment through the coach's or
+  captain's imperfect **belief about personal fit**. A fitted choice model may
+  use inferred preparedness directly as a proxy because that belief is not
+  observed; this is a model reduction, not the literal causal path.
+- The anticipated field can affect preparation and selection. Attendance and
+  aggregate selections create the realised field, which then affects pairing
+  and matchups. Expectations do not directly pair games.
+- Match performance is relative. The opponent node denotes a mirrored branch
+  containing the other coach's preparedness, race, and build rather than a
+  fundamentally different process.
+- Relative expected performance and game stochasticity generate the realised
+  outcome, which then generates the recorded W/D/L and optional TD/CAS
+  observation. Results are evidence about preparedness, not preparedness
+  itself.
+
+## Intended fitted projection
+
+The initial statistical model should remain deliberately smaller than the
+canonical DAG:
+
+```text
+C[i,r,t] = A[i] + B[i]' x[r] + psi * log(1 + n_NAF[i,r,t])
+
+eta_game = C[i,rA,t] - C[j,rB,t]
+         + pack-conditional race/build effects
+         + matchup effects
+
+U[i,r,t] = proxy_for_personal_fit[i,r,t]
+         + pack/field favorability[r,t]
+         + prior race-history and recency terms
+         - novelty friction
+         + availability and event constraints
+```
+
+Here `C` is a restricted statistical preparedness composite. In the first
+joint variant, `C` may proxy personal-fit belief in the choice likelihood; the
+conservative baseline uses only strictly pre-event observed summaries. A
+coach-specific competitive-adaptation response is a later extension, promoted
+only if it improves held-out switching and outcome predictions without
+destabilising pack-treatment conclusions.
 
 Observed-data relationships are kept out of the influence network. They have
 their own noncausal proxy map:
@@ -178,6 +235,13 @@ flowchart LR
 - The event-`t+1` box makes learning and loyalty feedback temporal rather than
   same-event reverse causation.
 
+For event ordering and the preferred arrow semantics, use the canonical
+process DAG rather than this inventory. In particular, the canonical DAG
+separates attendance from race selection, actual preparedness from beliefs
+about personal fit, anticipated from realised fields, expected performance
+from stochastic realisation, and the game outcome from its recorded
+observation.
+
 ## Observation and proxy map
 
 This second network is explicitly noncausal. Undirected dotted connections
@@ -230,6 +294,7 @@ the available data may require collapsing them:
 4. Competitive investment, exploration, and responsiveness to favorability.
 5. Pack treatment, enabled build, matchup exposure, and realised performance.
 
-The eventual model should be drawn as a highlighted subset of this map rather
-than replacing it. Greyed-out nodes would then remain visible as omitted
+The eventual model should be shown as a highlighted projection of the
+canonical process DAG, with this inventory available to explain what each
+composite may contain. Greyed-out nodes should remain visible as omitted
 mechanisms and possible sources of residual structure or bias.

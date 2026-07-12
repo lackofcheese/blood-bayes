@@ -4,26 +4,30 @@ Status: discussion scratchpad. This is a deliberately small candidate inspired
 by the broader conceptual network. It is not part of the approved v1 model and
 does not override `PRD.md`, `MODELING.md`, or `TECHNICAL.md`.
 
-Related visual: [PLAYER_RACE_CONCEPT_MAP.md](PLAYER_RACE_CONCEPT_MAP.md).
+Related visual and canonical generative DAG:
+[PLAYER_RACE_CONCEPT_MAP.md](PLAYER_RACE_CONCEPT_MAP.md).
 
 ## 1. Core hypothesis
 
-A coach's latent competence with a race may affect both:
+A coach's latent pre-event preparedness with a race may affect both:
 
 1. how well the coach performs after selecting that race; and
-2. the probability that the coach selects the race in the first place.
+2. the coach's or captain's belief about personal fit, which affects choice or
+   assignment.
 
 ```text
-                         ┌──► race choice
-coach–race competence ───┤
+actual preparedness ─────┬──► believed personal fit ──► race choice/assignment
                          └──► match performance
 ```
 
-Separate match and choice models that omit this shared cause risk treating
-competence-driven selection as loyalty, favorability response, or a race/pack
-performance effect. A joint likelihood provides a coherent way to share
-evidence while propagating uncertainty. It does not, by itself, identify the
-real-world causes of competence.
+Separate match and choice models that omit this shared structure risk treating
+preparedness-related selection as loyalty, favorability response, or a
+race/pack performance effect. In the real process, belief is an imperfect
+mediator and may be held by a captain rather than the coach. A fitted model may
+use inferred preparedness directly as a proxy when belief is unobserved; that
+is a deliberate reduction, not the literal generative claim. A joint
+likelihood can share evidence while propagating uncertainty, but does not
+identify the real-world causes of preparedness.
 
 ## 2. Deliberately small competence model
 
@@ -35,7 +39,8 @@ C[i,r,t] = A[i] + B[i]' x[r] + psi * log(1 + n_NAF[i,r,t])
 
 where:
 
-- `C[i,r,t]` is latent coach–race competence;
+- `C[i,r,t]` is a restricted statistical approximation to actual pre-event
+  coach–race preparedness;
 - `A[i]` is general coach ability;
 - `B[i]` is a very low-dimensional style-aptitude loading;
 - `x[r]` is a frozen race-style descriptor vector;
@@ -87,9 +92,10 @@ U[i,r,t] = beta_comp * C[i,r,t]
          + popularity_and_context[r,t]
 ```
 
-`beta_comp * C` is the distinctive joint-model term: coaches may select races
-they expect to play well personally, independently of the race's generic pack
-favorability.
+`beta_comp * C` is the distinctive joint-model term: it proxies the unobserved
+coach/captain belief about personal fit. The gold-standard DAG routes actual
+preparedness through that belief; it does not claim decision-makers observe
+preparedness without error.
 
 Observed loyalty may use strictly prior exact-race history, recency, last race,
 and repertoire summaries. It remains predictive evidence rather than a claim
@@ -175,12 +181,15 @@ the omitted real-world mechanisms do not exist.
 
 1. Should the first style term be a single Bash↔Ag loading or independent Bash
    and Ag loadings?
-2. Does inferred competence belong in choice directly, or should the choice
-   model use only the coach's belief about competence—which may be noisy or
-   biased?
-3. Is competitive adaptation distinct enough from observed switching and
+2. Is competitive adaptation distinct enough from observed switching and
    repertoire breadth to justify `G[i]`?
-4. Can the joint likelihood learn coach–race competence without allowing
+3. Can the joint likelihood learn coach–race preparedness without allowing
    performance on selected races to overstate competence on unselected races?
-5. Should this be only a post-gate field-model refinement, or is the selection
+4. Should this be only a post-gate field-model refinement, or is the selection
    path important enough to include in a gate sensitivity?
+
+Settled conceptual decision: actual preparedness does not enter real-world
+choice directly. It informs a possibly noisy or biased coach/captain belief
+about personal fit, which affects choice or assignment. Because that belief is
+unobserved, the joint fitted variant may use inferred `C` directly as its
+proxy; the baseline uses only strictly pre-event observed history summaries.

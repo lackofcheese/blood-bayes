@@ -6,7 +6,16 @@ implementation specification. Its purpose is to expose assumptions, omitted
 paths, observational equivalences, and possible simplifications before a
 smaller statistical model is chosen.
 
-## 1. Gold-standard conceptual network
+## 1. Expanded construct inventory
+
+The canonical, time-ordered gold-standard generative DAG is
+[player_race_process_map.svg](diagrams/player_race_process_map.svg), with
+editable source at
+[player_race_process_map.dot](diagrams/player_race_process_map.dot). That DAG
+is the primary reference for event ordering, selection, and arrow semantics.
+The richer network below is retained as a construct inventory: it decomposes
+possible mechanisms that the canonical DAG and fitted model deliberately
+collapse.
 
 Read this as one event-time slice, `t`. Anything labelled "prior" occurred
 strictly before the current event. The next-period arrows at the bottom make
@@ -217,4 +226,6 @@ For every candidate latent node, ask:
 
 The visual is intentionally richer than the eventual implementation. A node
 may be important for interpreting bias or uncertainty even when it should not
-receive its own parameter.
+receive its own parameter. Formal acyclicity and time ordering belong to the
+canonical process DAG; this inventory should not be used as a competing
+generative specification.
