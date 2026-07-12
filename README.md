@@ -25,6 +25,9 @@ the repository root:
   nafstat-tmp-name.zip reports/generated/event_catalog --variant 15
 .venv/bin/bb-stats-tourplay-coverage \
   nafstat-tmp-name.zip reports/generated/tourplay_coverage_dry
+.venv/bin/bb-stats-tourplay-linker \
+  data/derived/naf data/derived/tourplay/tourplay_event_link.csv \
+  data/raw/tourplay/tournament-pages reports/generated/tourplay_linker
 .venv/bin/bb-stats-tourplay-normalize \
   reports/generated/tourplay_coverage/tourplay_coverage.json \
   data/raw/tourplay data/derived/tourplay
@@ -36,6 +39,15 @@ the repository root:
 .venv/bin/bb-stats-tourplay-resolve \
   data/derived/tourplay data/derived/tourplay_registry \
   data/derived/tourplay_resolved
+.venv/bin/bb-stats-exploratory-signal \
+  data/derived/naf data/derived/tourplay data/derived/tourplay_resolved \
+  reports/generated/exploratory_signal
+.venv/bin/bb-stats-tier-signal \
+  data/derived/naf data/derived/tourplay data/derived/tourplay_resolved \
+  reports/generated/tier_signal
+.venv/bin/bb-stats-tier-power \
+  data/derived/naf data/derived/tourplay data/derived/tourplay_resolved \
+  reports/generated/tier_power
 ```
 
 The event catalogue is a discovery and connectivity report. Source hints are not
@@ -58,3 +70,17 @@ in `unresolved_observed.csv`; the pipeline never guesses their meaning.
 The resolver joins those registries back onto the normalized rule rows while retaining
 every raw ID and an explicit resolution status. It is also fully offline and checks
 that every source row is represented exactly once.
+
+The exploratory-signal command is explicitly non-binding reconnaissance. It measures
+coach/race-adjusted event-by-race residual variation and tests crude, literal Tourplay
+fields under grouped event holdout. Its fields are not treatment schema v0, its legal
+alternatives are not realized builds, and its output must not be interpreted causally.
+
+The tier-signal command is a stronger but still exploratory match-level sensitivity. It
+jointly estimates antisymmetric coach/race effects, tests within-race relative tier under
+complete event holdout, and rehearses recovery after injecting known scalar effects into
+the observed schedule. The injection is not a generative W/D/L power calculation.
+
+The tier-power command adds a conditional three-category W/D/L simulation. It holds
+cross-fitted nuisance predictions fixed, so its detection probabilities are deliberately
+described as optimistic and are not the final gate power rehearsal.
