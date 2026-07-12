@@ -1,0 +1,40 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "bb-stats"
+version = "0.1.0"
+description = "Reproducible NAF tournament analysis and tournament-pack modelling"
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.11",
+]
+
+[project.scripts]
+bb-stats-naf = "bb_stats.ingest.naf:main"
+bb-stats-naf-audit = "bb_stats.analysis.naf_audit:main"
+bb-stats-event-catalog = "bb_stats.analysis.event_catalog:main"
+bb-stats-tourplay-coverage = "bb_stats.analysis.tourplay_coverage:main"
+bb-stats-tourplay-normalize = "bb_stats.ingest.tourplay:main"
+bb-stats-tourplay-registry = "bb_stats.ingest.tourplay_registry:main"
+bb-stats-tourplay-resolve = "bb_stats.analysis.tourplay_resolved:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/bb_stats"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
