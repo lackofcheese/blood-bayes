@@ -44,11 +44,10 @@ where:
 - `psi * log(1+n)` is a weak, saturating familiarity contribution, not a
   literal learning curve.
 
-The smallest useful style version could use one coach loading. A slightly
-richer version could use separate contact/control and mobility/ball-handling
-loadings. Those race dimensions need not sum to one. Stunty/unreliable
-mechanics and entry difficulty remain separate descriptors rather than a
-forced point on the bash–agility line.
+The smallest useful style version could use one Bash↔Ag coach loading. A
+slightly richer version could use separate Bash and Ag loadings. Those race
+dimensions need not sum to one. Stunty/unusual mechanics and team difficulty
+remain separate descriptors rather than a forced point on the Bash–Ag line.
 
 Do not initially add a free residual for every coach×race cell. It would be
 sparse, liable to absorb matchup or treatment signal, and difficult to
@@ -174,8 +173,8 @@ the omitted real-world mechanisms do not exist.
 
 ## 9. Main unresolved design questions
 
-1. Should the first style term be a single bash↔agile loading or independent
-   contact and mobility loadings?
+1. Should the first style term be a single Bash↔Ag loading or independent Bash
+   and Ag loadings?
 2. Does inferred competence belong in choice directly, or should the choice
    model use only the coach's belief about competence—which may be noisy or
    biased?

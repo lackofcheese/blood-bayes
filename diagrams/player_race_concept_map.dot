@@ -5,7 +5,7 @@ digraph PlayerRaceConceptMap {
     pad="0.35",
     nodesep="0.35",
     ranksep="0.75",
-    splines=spline,
+    splines=polyline,
     compound=true,
     newrank=true,
     fontname="Arial",
@@ -28,7 +28,7 @@ digraph PlayerRaceConceptMap {
   edge [
     color="#66717c",
     penwidth=1.1,
-    arrowsize=0.65,
+    arrowsize=0.85,
     fontname="Arial",
     fontsize=8,
     fontcolor="#4b5560"
@@ -43,7 +43,7 @@ digraph PlayerRaceConceptMap {
     style="rounded,filled";
 
     pack [label="Pack treatment\nresources · legality · scoring", fillcolor="#fff1c9", color="#9b6a00"];
-    race [label="Race style geometry\ncontact · mobility · stunty / unreliability", fillcolor="#fff1c9", color="#9b6a00"];
+    race [label="Race style geometry\nBash · Ag · Stunty / unusual mechanics", fillcolor="#fff1c9", color="#9b6a00"];
     difficulty [label="Entry and mastery\ndifficulty", fillcolor="#fff1c9", color="#9b6a00"];
     meta [label="Region · community\npublic meta", fillcolor="#fff1c9", color="#9b6a00"];
     format [label="Event format\nopen or squad", fillcolor="#fff1c9", color="#9b6a00"];
@@ -68,20 +68,6 @@ digraph PlayerRaceConceptMap {
     resources [label="Material and social resources\nmoney · storage · friends · borrowing", fillcolor="#eadfff", color="#6842a6"];
   }
 
-  subgraph cluster_observed {
-    label="STRICTLY-PRIOR OBSERVABLE EVIDENCE";
-    color="#69a66f";
-    fillcolor="#f0fbf1";
-    fontcolor="#286430";
-    fontsize=11;
-    style="rounded,filled";
-
-    naf_history [label="NAF race history\ngames · recency · last race", fillcolor="#dcf4df", color="#31733a"];
-    prior_results [label="Prior NAF\nresults", fillcolor="#dcf4df", color="#31733a"];
-    repertoire [label="Derived breadth · entropy\nswitching rate", fillcolor="#dcf4df", color="#31733a"];
-    rating [label="Elo / Glicko-like\nsummary", fillcolor="#dcf4df", color="#31733a"];
-  }
-
   subgraph cluster_state {
     label="LATENT COACH STATE BEFORE THE EVENT";
     color="#6096c8";
@@ -92,6 +78,7 @@ digraph PlayerRaceConceptMap {
 
     general_ability [label="Current general\nability", fillcolor="#dcecff", color="#2867a3"];
     hidden_experience [label="Hidden experience\nleague · online · casual · earlier play", fillcolor="#dcecff", color="#2867a3"];
+    naf_play [label="Prior NAF\ntournament play", fillcolor="#dcecff", color="#2867a3"];
     total_experience [label="Total race-specific\nexperience", fillcolor="#dcecff", color="#2867a3"];
     style_experience [label="Transferable style\nexperience", fillcolor="#dcecff", color="#2867a3"];
     competence [
@@ -107,7 +94,7 @@ digraph PlayerRaceConceptMap {
   }
 
   subgraph cluster_current {
-    label="CURRENT EVENT";
+    label="CURRENT EVENT t";
     color="#c76a7e";
     fillcolor="#fff3f5";
     fontcolor="#8d2940";
@@ -122,7 +109,7 @@ digraph PlayerRaceConceptMap {
   }
 
   future [
-    label="LATER EVENTS\nupdated experience · access · loyalty\nbeliefs and ability",
+    label="LATER EVENT t+1\nupdated experience · access · loyalty\nbeliefs and ability",
     fillcolor="#eeeeee",
     color="#666666",
     penwidth=1.5
@@ -138,7 +125,7 @@ digraph PlayerRaceConceptMap {
   meta -> favorability;
   meta -> field;
   meta -> access;
-  format -> choice;
+  format -> choice [headport=s, color="#a34259"];
   format -> pairing;
   field -> favorability;
   field -> pairing;
@@ -151,6 +138,7 @@ digraph PlayerRaceConceptMap {
   investment -> hidden_experience;
   investment -> adaptation;
   hidden_experience -> total_experience;
+  naf_play -> total_experience;
   total_experience -> competence;
   total_experience -> style_experience;
   style_experience -> competence;
@@ -162,37 +150,20 @@ digraph PlayerRaceConceptMap {
   exploration -> adaptation;
   resources -> access;
 
-  /* Partial observations and derived summaries */
-  naf_history -> total_experience [style=dashed, label="partial proxy"];
-  naf_history -> loyalty [style=dashed, label="evidence"];
-  naf_history -> repertoire;
-  repertoire -> adaptation [style=dashed, label="evidence"];
-  prior_results -> rating;
-  naf_history -> rating;
-  general_ability -> prior_results [style=dashed, label="leaves evidence"];
-  competence -> prior_results [style=dashed, label="leaves evidence"];
-
   /* Joint choice and performance heart */
-  access -> choice;
-  loyalty -> choice;
-  adaptation -> choice;
-  favorability -> choice;
-  competence -> choice [color="#004f87", penwidth=2.5];
-  choice -> build;
-  build -> performance;
-  competence -> performance [color="#004f87", penwidth=2.5];
-  pairing -> performance;
+  access -> choice [headport=sw, color="#a34259"];
+  loyalty -> choice [headport=n, color="#a34259"];
+  adaptation -> choice [headport=nw, color="#a34259"];
+  favorability -> choice [headport=s, color="#a34259"];
+  competence -> choice [headport=w, color="#004f87", penwidth=2.5];
+  choice -> build [tailport=e, headport=w];
+  build -> performance [tailport=e, headport=w, color="#8d4960"];
+  competence -> performance [headport=nw, color="#004f87", penwidth=2.5];
+  pairing -> performance [headport=sw, color="#8d4960"];
   performance -> outcome;
 
-  /* Explicitly future-facing feedback */
+  /* Explicit event-t to event-t+1 feedback */
   choice -> future;
   outcome -> future;
-  future -> naf_history [style=dashed, label="next event", constraint=false];
-  future -> loyalty [style=dashed, label="next event", constraint=false];
-  future -> total_experience [style=dashed, label="next event", constraint=false];
 
-  /* Give the major sections a stable left-to-right reading order. */
-  { rank=same; talent; style_aptitude; learning; investment; preference; exploration; resources; }
-  { rank=same; general_ability; hidden_experience; total_experience; style_experience; competence; access; loyalty; adaptation; }
-  { rank=same; choice; build; pairing; performance; outcome; }
 }

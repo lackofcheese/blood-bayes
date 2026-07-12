@@ -17,7 +17,7 @@ causal cycle.
 flowchart TB
   subgraph DEEP[Relatively persistent coach characteristics]
     TAL[General game talent<br/>planning, calculation, risk judgement]
-    STAL[Style-specific aptitude<br/>contact/control and mobility/ball play]
+    STAL[Style-specific aptitude<br/>Bash and Ag]
     LR[Learning rate / attainable skill ceiling]
     MOT[Competitive investment<br/>time, preparation, willingness to optimise]
     PREF[Psychological preferences<br/>style affinity and exact-race attachment]
@@ -50,20 +50,11 @@ flowchart TB
   end
 
   subgraph RACE[Race and pack properties]
-    STYLE[Race demands/capabilities<br/>contact, mobility, stunty/unreliability]
+    STYLE[Race demands/capabilities<br/>Bash, Ag, stunty/unusual mechanics]
     DIFF[Entry and mastery difficulty]
     TREAT[Race-specific pack treatment]
     INTRINSIC[Pack-conditional race strength]
     MATCHUP[Pack-conditional matchup profile]
-  end
-
-  subgraph OBS_PRIOR[Observed or derived strictly-prior NAF record]
-    NAFG[Prior NAF games by race]
-    NAFR[Prior NAF match outcomes]
-    LAST[Last observed race]
-    BREADTH[Observed repertoire breadth / entropy]
-    SWITCH[Observed switching rate]
-    RATING[Derived Elo/Glicko-like summary]
   end
 
   subgraph EVENT_T[Current event t]
@@ -156,16 +147,6 @@ flowchart TB
   ENG --> PERF
   PERF --> RESULT
 
-  %% What NAF observes and derived summaries
-  NEXP --> NAFG
-  NAFR --> RATING
-  NAFG --> RATING
-  NAFG --> BREADTH
-  NAFG --> SWITCH
-  NAFG --> LAST
-  GSKILL --> NAFR
-  RSKILL --> NAFR
-
   %% Time-forward feedback, not same-event feedback
   CHOICE --> FUTEXP
   RESULT --> FUTEXP
@@ -179,7 +160,6 @@ flowchart TB
   classDef external fill:#fff0c7,stroke:#9a6b00,color:#2e2100;
   classDef latent fill:#dcecff,stroke:#2867a3,color:#10243a;
   classDef race fill:#ffe1d6,stroke:#a44c2c,color:#35160d;
-  classDef observed fill:#dcf4df,stroke:#31733a,color:#102a14;
   classDef current fill:#ffdce3,stroke:#9d3850,color:#36121b;
   classDef future fill:#eeeeee,stroke:#666,color:#222;
 
@@ -187,7 +167,6 @@ flowchart TB
   class REGION,SOURCES,META,POOL,EVENT,PACK,CAPTAIN external;
   class ENG,ACCESS,HEXP,NEXP,STYLEEXP,REXP,GSKILL,RSKILL,LOY,POWER,BELIEF latent;
   class STYLE,DIFF,TREAT,INTRINSIC,MATCHUP race;
-  class NAFG,NAFR,LAST,BREADTH,SWITCH,RATING observed;
   class CHOICE,BUILD,PAIR,PERF,RESULT current;
   class FUTEXP,FUTLOY,FUTACC,FUTBEL future;
 ```
@@ -198,58 +177,21 @@ Colour key:
 - Gold: environment and opportunity.
 - Blue: evolving latent coach state.
 - Orange: race and pack mechanics.
-- Green: observed or derived prior NAF information.
 - Red: the current event's selection and outcome process.
 - Grey: state changes carried into future events.
 
 ## 2. The observable boundary
 
-The full network contains many real concepts that cannot be separated with
-NAF tournament data alone. This reduced view highlights what the dataset
-actually sees.
+The influence network deliberately omits observed-record and derived-rating
+nodes. A finite set of "evidence about" arrows would privilege some latent
+interpretations while silently omitting many others. Observed-data
+relationships therefore live in a separate, explicitly noncausal proxy map:
 
-```mermaid
-flowchart LR
-  subgraph HIDDEN[Several observationally entangled causes]
-    A[General and style-specific ability]
-    B[Hidden online / league / casual experience]
-    C[Ownership, borrowing and acquisition access]
-    D[Preference, loyalty and switching disposition]
-    E[Preparation, seriousness and competitive adaptation]
-  end
+![Observed NAF data and possible latent interpretations](diagrams/player_race_proxy_map.svg)
 
-  subgraph SEEN[Observed before the event]
-    F[Prior NAF race choices]
-    G[Prior NAF match results]
-    H[Pack, event, region and legal races]
-  end
-
-  subgraph NOW[Observed at the event]
-    I[Current race choice]
-    J[Current W / D / L results]
-  end
-
-  A --> G
-  A --> J
-  A --> I
-  B --> G
-  B --> F
-  B --> I
-  B --> J
-  C --> F
-  C --> I
-  D --> F
-  D --> I
-  E --> G
-  E --> I
-  E --> J
-  F --> I
-  F --> J
-  G --> I
-  G --> J
-  H --> I
-  H --> J
-```
+An undirected dotted connection means only that the observation may contain
+information about the concept. It does not assert a causal direction, a
+conditional independence, or an exhaustive set of Bayesian posterior updates.
 
 Consequently, excellent first-observed performance is evidence for a broad
 latent preparedness construct, but it does not identify whether the cause was

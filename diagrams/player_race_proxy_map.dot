@@ -1,0 +1,76 @@
+graph PlayerRaceProxyMap {
+  graph [
+    rankdir=LR,
+    bgcolor="#ffffff",
+    pad="0.35",
+    nodesep="0.45",
+    ranksep="1.0",
+    splines=spline,
+    newrank=true,
+    fontname="Arial",
+    fontsize=18,
+    label="Observed NAF data and possible latent interpretations\nNoncausal proxy map; dotted links mean 'may contain information about'",
+    labelloc=t,
+    labeljust=l
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Arial",
+    fontsize=10,
+    margin="0.13,0.09",
+    color="#555555",
+    penwidth=1.2
+  ];
+
+  edge [
+    style=dotted,
+    color="#7a8490",
+    penwidth=1.4
+  ];
+
+  subgraph cluster_data {
+    label="OBSERVED NAF SUMMARIES";
+    color="#69a66f";
+    fillcolor="#f0fbf1";
+    fontcolor="#286430";
+    fontsize=11;
+    style="rounded,filled";
+
+    history [label="Race history\ngames · events · recency · last race", fillcolor="#dcf4df", color="#31733a"];
+    results [label="Prior match\nresults", fillcolor="#dcf4df", color="#31733a"];
+    repertoire [label="Repertoire breadth · entropy\nand switching", fillcolor="#dcf4df", color="#31733a"];
+    first_use [label="First observed use\nand its performance", fillcolor="#dcf4df", color="#31733a"];
+  }
+
+  subgraph cluster_concepts {
+    label="POSSIBLE LATENT INTERPRETATIONS";
+    color="#6096c8";
+    fillcolor="#eff7ff";
+    fontcolor="#235d93";
+    fontsize=11;
+    style="rounded,filled";
+
+    experience [label="Total race\nexperience", fillcolor="#dcecff", color="#2867a3"];
+    competence [label="Coach–race\ncompetence", fillcolor="#dcecff", color="#2867a3"];
+    ability [label="General ability", fillcolor="#dcecff", color="#2867a3"];
+    loyalty [label="Psychological loyalty\nand preference", fillcolor="#dcecff", color="#2867a3"];
+    access [label="Miniature and\npractical access", fillcolor="#dcecff", color="#2867a3"];
+    exploration [label="Exploration / switching\ndisposition", fillcolor="#dcecff", color="#2867a3"];
+    investment [label="Competitive investment\nand preparation", fillcolor="#dcecff", color="#2867a3"];
+    hidden [label="Hidden league, online,\nand casual play", fillcolor="#dcecff", color="#2867a3"];
+  }
+
+  history -- experience;
+  history -- loyalty;
+  history -- access;
+  results -- ability;
+  results -- competence;
+  repertoire -- exploration;
+  repertoire -- access;
+  repertoire -- investment;
+  first_use -- competence;
+  first_use -- hidden;
+  first_use -- investment;
+}

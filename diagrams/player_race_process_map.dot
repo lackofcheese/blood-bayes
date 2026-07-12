@@ -1,0 +1,265 @@
+digraph PlayerRaceProcessMap {
+  graph [
+    rankdir=LR,
+    bgcolor="#ffffff",
+    pad="0.30",
+    nodesep="0.42",
+    ranksep="0.90",
+    splines=polyline,
+    compound=true,
+    newrank=true,
+    outputorder=edgesfirst,
+    fontname="Arial",
+    fontsize=20,
+    label="Coach race-selection and tournament-performance process\nInformal conceptual overview — arrows mean plausible influence, not fitted parameters",
+    labelloc=t,
+    labeljust=l
+  ];
+
+  node [
+    shape=box,
+    style="rounded,filled",
+    fontname="Arial",
+    fontsize=11,
+    margin="0.16,0.10",
+    color="#555f69",
+    penwidth=1.3
+  ];
+
+  edge [
+    color="#65717d",
+    penwidth=1.15,
+    arrowsize=0.82,
+    fontname="Arial",
+    fontsize=8.5,
+    fontcolor="#46515c"
+  ];
+
+  /* Column 1: upstream context and coach formation. */
+  subgraph cluster_upstream {
+    label="UPSTREAM CONTEXT";
+    color="#8562b5";
+    fillcolor="#f8f2ff";
+    fontcolor="#56338e";
+    fontsize=13;
+    penwidth=1.4;
+    style="rounded,filled";
+
+    organizer_context [
+      label="Historical race results · local meta\norganiser goals and event identity",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    coach_traits [
+      label="Coach talent · Bash/Ag aptitude\nlearning capacity · competitive investment",
+      fillcolor="#eadfff", color="#6842a6"
+    ];
+    play_history [
+      label="Prior play and preparation\nNAF · league · online · casual",
+      fillcolor="#eadfff", color="#6842a6"
+    ];
+    access_loyalty [
+      label="Practical access and loyalty\nminiatures · borrowing · preference",
+      fillcolor="#eadfff", color="#6842a6"
+    ];
+    attendance_factors [
+      label="Attendance factors\ntravel · money · time · prestige · pack appeal",
+      fillcolor="#eadfff", color="#6842a6"
+    ];
+  }
+
+  /* Column 2: pack, field expectations, and readiness. */
+  subgraph cluster_preevent {
+    label="BEFORE THE EVENT";
+    color="#4f8fc5";
+    fillcolor="#eff7ff";
+    fontcolor="#235d93";
+    fontsize=13;
+    penwidth=1.4;
+    style="rounded,filled";
+
+    pack [
+      label="Rules pack\nlegality · resources · scoring · event format",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    attendance [
+      label="Attendance and realised\ncoach pool",
+      fillcolor="#dcecff", color="#2867a3"
+    ];
+    anticipated_field [
+      label="Anticipated field\nand public meta",
+      fillcolor="#dcecff", color="#2867a3"
+    ];
+    actual_competence [
+      label="ACTUAL COACH–RACE COMPETENCE",
+      fillcolor="#ccecff", color="#004f87", penwidth=2.8
+    ];
+    perceived_fit [
+      label="Coach/captain belief\nabout personal fit",
+      fillcolor="#dcecff", color="#2867a3"
+    ];
+  }
+
+  /* Column 3: choice or assignment. */
+  subgraph cluster_selection {
+    label="SELECTION OR ASSIGNMENT";
+    color="#b45a70";
+    fillcolor="#fff3f5";
+    fontcolor="#8d2940";
+    fontsize=13;
+    penwidth=1.4;
+    style="rounded,filled";
+
+    available_choices [
+      label="Available races and\nsquad constraints",
+      fillcolor="#ffe0e6", color="#9d3850"
+    ];
+    perceived_advantage [
+      label="Perceived competitive advantage\npack fit · field fit · personal fit",
+      fillcolor="#ffe0e6", color="#9d3850"
+    ];
+    adaptation [
+      label="Competitive adaptation\nresponse to an available edge",
+      fillcolor="#ffe0e6", color="#9d3850"
+    ];
+    selection [
+      label="Individual choice or\ncaptain/squad assignment",
+      fillcolor="#ffd2dc", color="#8d2940", penwidth=2.4
+    ];
+  }
+
+  /* Column 4: realised tournament environment. */
+  subgraph cluster_realised {
+    label="REALISED TOURNAMENT";
+    color="#b17819";
+    fillcolor="#fff8e3";
+    fontcolor="#77500a";
+    fontsize=13;
+    penwidth=1.4;
+    style="rounded,filled";
+
+    race_played [
+      label="Race played",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    realised_field [
+      label="Aggregate choices and\nrealised field",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    own_build [
+      label="Own realised roster/build\nresources · skills · stars · inducements",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    pairing [
+      label="Pairing and opponent\nformat · standings · realised field",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+    matchup [
+      label="Actual matchup\nown race/build versus opponent race/build",
+      fillcolor="#fff1c9", color="#9b6a00"
+    ];
+  }
+
+  /* Column 5: performance, result, and time-forward state. */
+  subgraph cluster_outcome {
+    label="PERFORMANCE AND TIME";
+    color="#6f7d89";
+    fillcolor="#f4f5f6";
+    fontcolor="#46515c";
+    fontsize=13;
+    penwidth=1.4;
+    style="rounded,filled";
+
+    strategy [
+      label="Match strategy / decisiveness\nincluding scoring incentives",
+      fillcolor="#eeeeee", color="#68737d"
+    ];
+    performance [
+      label="Relative match performance\nboth coaches and both builds",
+      fillcolor="#e5e9ec", color="#46515c", penwidth=2.3
+    ];
+    stochasticity [
+      label="Game stochasticity\ndice · kick-offs · weather · game state",
+      fillcolor="#eeeeee", color="#68737d"
+    ];
+    result [
+      label="Match result\nW / D / L and optional TD/CAS",
+      fillcolor="#e5e9ec", color="#46515c", penwidth=2.0
+    ];
+    next_round [
+      label="Later round state\nstandings · next pairing · progression",
+      fillcolor="#eeeeee", color="#68737d"
+    ];
+    next_event [
+      label="Later event state\nexperience · beliefs · loyalty · access",
+      fillcolor="#eeeeee", color="#68737d"
+    ];
+  }
+
+  /* Upstream formation and selection into the observed coach pool. */
+  organizer_context:e -> pack:w [color="#9b6a00"];
+  organizer_context:e -> anticipated_field:w;
+  coach_traits:e -> actual_competence:w [color="#004f87", penwidth=1.8];
+  play_history:e -> actual_competence:w [color="#004f87", penwidth=1.8];
+  attendance_factors:e -> attendance:w;
+  pack:e -> attendance:w [label="appeal"];
+  attendance:e -> anticipated_field:w;
+
+  /* Actual competence and beliefs are conceptually distinct. */
+  actual_competence:e -> perceived_fit:w [color="#004f87", penwidth=1.8];
+  play_history:e -> perceived_fit:w;
+
+  /* Choice/assignment process. */
+  pack:e -> available_choices:w [color="#a34259"];
+  pack:e -> perceived_advantage:w [color="#a34259"];
+  anticipated_field:e -> perceived_advantage:w [color="#a34259"];
+  perceived_fit:e -> perceived_advantage:w [color="#a34259"];
+  access_loyalty:e -> selection:w [color="#a34259"];
+  available_choices:e -> selection:w [color="#a34259"];
+  perceived_advantage:e -> selection:w [color="#a34259"];
+  adaptation:e -> selection:w [color="#a34259"];
+  coach_traits:e -> adaptation:w;
+
+  /* Aggregate choices create the realised field; expectations do not pair games. */
+  selection:e -> race_played:w [color="#8d2940", penwidth=2.0];
+  attendance:e -> realised_field:w;
+  race_played:e -> realised_field:w [label="aggregate"];
+  race_played:e -> own_build:w;
+  pack:e -> own_build:w;
+  anticipated_field:e -> own_build:w [label="preparation"];
+  realised_field:e -> pairing:w;
+  pack:e -> pairing:w [label="format"];
+  race_played:e -> matchup:w;
+  pairing:e -> matchup:w;
+  own_build:e -> matchup:w;
+
+  /* Performance is relative and results remain stochastic. */
+  actual_competence:e -> performance:w [color="#004f87", penwidth=2.5];
+  matchup:e -> performance:w [color="#77500a", penwidth=1.7];
+  own_build:e -> performance:w;
+  pack:e -> strategy:w [label="scoring"];
+  strategy:e -> performance:w;
+  performance:e -> result:w [color="#46515c", penwidth=2.2];
+  stochasticity:e -> result:w;
+
+  /* Within-event and between-event feedback are explicitly temporal. */
+  result:e -> next_round:w;
+  result:e -> next_event:w;
+  race_played:e -> next_event:w [label="experience"];
+  next_round:w -> pairing:e [
+    label="next round",
+    style=dashed,
+    color="#68737d",
+    constraint=false
+  ];
+
+  /* Each process stage occupies one vertical column. */
+  { rank=same; organizer_context; coach_traits; play_history; access_loyalty; attendance_factors; }
+  { rank=same; pack; attendance; anticipated_field; actual_competence; perceived_fit; }
+  { rank=same; available_choices; perceived_advantage; adaptation; selection; }
+  { rank=same; race_played; realised_field; own_build; pairing; matchup; }
+  { rank=same; strategy; performance; stochasticity; result; next_round; next_event; }
+
+  /* Stabilise top-to-bottom ordering inside the dense realised/outcome columns. */
+  race_played -> realised_field -> own_build -> pairing -> matchup [style=invis, constraint=false, weight=100];
+  strategy -> performance -> stochasticity -> result -> next_round -> next_event [style=invis, constraint=false, weight=100];
+}
