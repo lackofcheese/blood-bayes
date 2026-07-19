@@ -89,3 +89,9 @@ Reviewed inferred Tourplay links live in `data/curated/tourplay_link_review.csv`
 canonical IDs and structural coverage for the first bounded detail wave live in
 `data/curated/tourplay_reviewed_details.csv`. Candidate links never enter those files
 without an explicit review decision and evidence summary.
+
+The sibling roster-builder repository provides a second, organizer-document-backed pack
+source. Its rules-pack manifests can seed draft annotations, but roster-validator
+coverage is not statistical pack completeness: non-roster rules and human field-level
+review remain mandatory. The assessed crosswalk and import boundary are documented in
+`reports/ROSTER_BUILDER_CROSSWALK.md`.

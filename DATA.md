@@ -30,6 +30,14 @@ and tournament metadata. It is not assumed to contain an authoritative structure
 tournament pack. NAF descriptions, URLs, and ruleset-file references are discovery
 evidence for a separate pack registry.
 
-Tourplay, pack PDFs, and organiser pages will be assessed as pack sources. Links to
-those sources must be stored with match method, confidence, review status, and quoted
-or structured evidence; fuzzy event-name matches are never silently accepted.
+Tourplay, pack PDFs, organiser pages, and reviewed derived manifests will be assessed as
+pack sources. The sibling roster-builder rules-pack corpus is a useful derived source,
+but its `runnable` status means complete for single-roster validation rather than
+model-ready for this project. Its pinned organiser document remains the normative source.
+
+Links to all sources must be stored with match method, authority, artifact digest,
+review status, and quoted or structured evidence; fuzzy event-name matches are never
+silently accepted. Model-used pack fields require human confirmation against the
+normative source. Tourplay and executable roster formats may corroborate or expose a
+discrepancy, but cannot silently override the pack. See
+`reports/ROSTER_BUILDER_CROSSWALK.md` for the source boundary and missing-field inventory.

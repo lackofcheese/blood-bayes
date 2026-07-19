@@ -130,6 +130,26 @@ roster version in that span and no parameters for it. Never zero-fill.
 
 ## T4. Pack schema and treatment vectors
 
+### T4.0 Source boundary
+
+Schema v0 is canonical and source-independent. Direct annotation, Tourplay imports,
+LLM PDF extraction, and imports from the sibling roster-builder rules-pack corpus all
+produce drafts of the same schema; no upstream representation is itself a model-ready
+pack. The crosswalk and current gap inventory are in
+`reports/ROSTER_BUILDER_CROSSWALK.md`.
+
+Every source artifact records its authority, version/digest, retrieval date, and
+evidence locators. Every model-used field references evidence and carries a review
+state (`unreviewed`, `confirmed`, `disputed`, or `unclear`); confirmation also records
+the human reviewer and date. A pack is model-ready only when required fields are
+confirmed and a whole-document clause sweep is complete. Upstream executable tests,
+`runnable` status, or agent review do not substitute for that human check.
+
+The reusable pack template is separate from an event-to-pack application. A pinned
+organizer amendment may change the applied rules for an event through an explicit,
+reviewed patch. Tourplay is corroborative/discrepancy evidence and never silently
+overrides the organizer source.
+
 ### T4.1 Annotation unit (per §9a)
 
 Packs are annotated at the **pack** level: tier definitions (grants in
@@ -834,9 +854,9 @@ are listed; anything not listed as a dependency can proceed in parallel.
 
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
-| W10 | Annotation guide (one page) + pack schema v0 + lints (T4.1) | W2 | A trial pack annotates in ≤60 min; lints catch seeded errors |
+| W10 | Annotation guide (one page) + source-independent pack schema v0 + evidence/review envelope + lints (T4.0–T4.1) | W2 | Eucalyptus and EuroBowl manifest trials cover open/squad and roster/non-roster rules; a trial pack annotates in ≤60 min; lints catch seeded errors |
 | W11 | Pack selection: apply PS1–PS7; connectivity script for PS7; TV-spread check (PS1/T4.3 — the budget grid is identified only where packs differ). PS4 applied as: prefer 60+ coaches, hard floor ~25–30 for regional-coverage (PS3) slots | W3 | ~20-pack list with per-criterion justification incl. TV spread; owner approves |
-| W12 | Annotate packs; double-annotate 3–4 (LLM second pass w/ quoted evidence) | W10, W11 | All YAML validates; disagreement review written up |
+| W12 | Annotate packs, using pinned roster-builder manifests as evidence-bearing draft inputs where available; complete the non-roster clause sweep; double-annotate 3–4 (LLM second pass w/ quoted evidence) | W10, W11 | All required fields human-confirmed or explicitly unresolved; all YAML validates; disagreement review written up |
 | W13 | Treatment-vector derivation + centering/standardization (T4.2) | W12 | Derivation unit-tested; centering-invariance test (T5.6.3) passes |
 | W14 | Pre-register `eval/GATE.md`: criteria finalized using W15's power rehearsal, training-corpus decision, known-case anchor list (T7, §9a) | W10, W15 | Committed before W16 begins; estimated power documented alongside criteria |
 | W15 | Exploratory correlation pass (§9a; stunty scatter headline); simulation-based power rehearsal (T5.6.6); descriptor table frozen (T5.5) | W13 | Both written up before the gate fit |
@@ -846,7 +866,7 @@ are listed; anything not listed as a dependency can proceed in parallel.
 
 | ID | Task | Depends on | Done when |
 |---|---|---|---|
-| W17 | Tourplay importer (rulesets → pack schema) | W4, W16 | Imported packs pass the same lints as hand annotations |
+| W17 | Source adapters (Tourplay observations and roster-builder manifests → draft pack schema) | W4, W10, W16 | Imports retain source IDs/digests and evidence, remain `unreviewed`, and pass the same lints as hand annotations |
 | W18 | LLM PDF extraction: strict schema, verbatim evidence, lint pass, `unclear` routing (FR6) | W10, W16 | On held-back hand-annotated packs, extraction matches human annotation; `unclear` rate reported |
 
 ### Field model and outputs (start after W16; not gated on milestone 3)
