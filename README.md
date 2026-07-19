@@ -84,3 +84,8 @@ the observed schedule. The injection is not a generative W/D/L power calculation
 The tier-power command adds a conditional three-category W/D/L simulation. It holds
 cross-fitted nuisance predictions fixed, so its detection probabilities are deliberately
 described as optimistic and are not the final gate power rehearsal.
+
+Reviewed inferred Tourplay links live in `data/curated/tourplay_link_review.csv`; fetched
+canonical IDs and structural coverage for the first bounded detail wave live in
+`data/curated/tourplay_reviewed_details.csv`. Candidate links never enter those files
+without an explicit review decision and evidence summary.

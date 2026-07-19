@@ -1,0 +1,12 @@
+naf_event_id,tourplay_slug,tourplay_event_id,fetch_status,http_status,has_tiers,has_race_mapping,has_improvement_packs,has_skill_costs,has_stacking,has_stars,pack_choice_structure
+9427,waterbowl-2026,19202,fetched,200,true,true,true,false,true,true,choice_set
+10403,tilean-team-cup-2026,21029,fetched,200,true,true,true,true,true,true,choice_set
+10276,hammabowl-ix,20224,fetched,200,true,true,true,true,true,true,choice_set
+10741,yorkshiremas-bowl-ii,18086,fetched,200,true,true,true,true,true,true,single_only
+11092,cane-toad-cup-2026,19001,fetched,200,true,true,true,true,true,true,single_only
+11156,lusobowl-vii---portuguese-national,20230,fetched,200,true,true,true,false,true,true,choice_set
+11606,croupe-des-mous-xiii,18666,fetched,200,true,true,true,true,true,true,single_only
+10783,swedish-nationals-2026-third-season,18028,fetched,200,true,true,true,true,true,true,single_only
+10965,royal-rumble-2026-wheel-of-chaos,19536,fetched,200,true,true,true,true,true,true,choice_set
+11202,chaos-on-the-coast-one-day-4,19546,fetched,200,true,true,true,true,true,true,single_only
+10453,the-home-nations-open-iii,21080,fetched,200,true,true,true,true,true,true,choice_set

@@ -36,6 +36,7 @@ COUNTRY_CODES = {
     "Luxembourg": "LU",
     "New Zealand": "NZ",
     "Northern Ireland": "GB",
+    "Norway": "NO",
     "Poland": "PL",
     "Portugal": "PT",
     "Russia": "RU",
@@ -44,6 +45,7 @@ COUNTRY_CODES = {
     "Slovak Republic": "SK",
     "Spain": "ES",
     "Sweden": "SE",
+    "Switzerland": "CH",
     "United States": "US",
     "Wales": "GB",
 }

@@ -1,0 +1,31 @@
+naf_event_id,tourplay_slug,decision,confidence,stratum,original_embedded_slug,evidence_summary
+9427,waterbowl-2026,linked,0.99,strong,,Exact name/date/Stockport/GB; BB2025 NAF card; 106 Tourplay registrations vs 103 NAF entries
+10403,tilean-team-cup-2026,linked,0.99,strong,,Exact date and Gorle/Italy; team mode; 291 registrations vs 286 entries
+10276,hammabowl-ix,linked,0.99,strong,,Exact name/date/Hamburg/DE; NAF card; registrations and entries both 78
+10535,english-inter-series-cup--team-invitational,linked,0.98,strong,,Exact date and Outpost/Sheffield; team mode; registrations and entries both 32
+10724,naf-supertour-26,linked,0.923,strong,,Exact date/Cardiff/GB; NAF card; registrations and entries both 34
+10741,yorkshiremas-bowl-ii,linked,0.99,strong,,Exact title/date/Leeds/GB; registrations 41 vs entries 40
+11092,cane-toad-cup-2026,linked,0.98,strong,,Exact title and Loganholme venue; AU UTC boundary; registrations 72 vs entries 65
+11156,lusobowl-vii---portuguese-national,linked,0.94,strong,,Premier/National title alias; exact Lisbon/date; registrations and entries both 72
+11403,cbbl---fumble-in-the-jungle-iii,linked,0.98,strong,,Exact title/Cairns/AU; UTC boundary; registrations 38 vs entries 33
+11606,croupe-des-mous-xiii,linked,0.99,strong,,Canonical slug typo but exact display title/venue/date/team mode; registrations 64 vs entries 63
+10783,swedish-nationals-2026-third-season,linked,0.93,threshold,,Core title/date/Sala/SE and team mode; registrations 139 vs entries 138
+10965,royal-rumble-2026-wheel-of-chaos,linked,0.98,threshold,,WoC title expansion; exact Carpi/date; registrations and entries both 57
+11016,skippy-memorial-cup,linked,0.98,threshold,,Year omitted but exact 2d6 Oslo venue/date; registrations and entries both 21
+10786,fondu-bowl-2026,linked,0.94,threshold,,Accent-only title difference; exact Zurich/date/team mode; registrations and entries both 28
+11238,caislean-cup-doubles,linked,0.97,threshold,,Doubles title expansion and mode; exact Castlewellan/date; registrations 32 vs entries 33
+10882,2d6-winterbowl-25,linked,0.98,threshold,,Exact title/date/2d6 Oslo venue; registrations and entries both 12
+11113,half--half---2nd-helping,linked,0.94,threshold,,Distinctive shortened title; exact Newport/date; registrations and entries both 30
+11202,chaos-on-the-coast-one-day-4,linked,0.98,threshold,,Decorated core title and exact Ourimbah; AU UTC boundary; registrations and entries both 41
+11329,outrider-bowl-june-2026,linked,0.98,threshold,,Exact Outrider Games venue/date/title; NAF text names Tourplay; registrations 39 vs entries 36
+10534,english-inter-series-cup--singles-open,linked,0.91,threshold,,Exact date and Sheffield series; singles title distinguishes team event; registrations and entries both 27
+10590,craba-bowl-2,linked,0.99,alias,craba-bowl-ii,Current NAF-marked BB2025 page matches Ayerbe/date; embedded slug is legacy BB2020 page
+11188,burdin-bowl-2026,linked,0.99,alias,burdin-bowl-5,Current BB2025 page matches Barakaldo/date and 22 entries; embedded slug is stale July 2025 BB2020 event
+10958,trapdoors-open,linked,0.99,alias,the-trapdoors-open,Explicit NAF URL and cached detail identify exact slug; listing alias is duplicate with different registration count
+11613,thunderbowl-open-year-one,linked,0.99,alias,thunderbowl-open-year-one,Absent from listing but explicit URL and cached detail match Surrey/title and 22 entries
+11784,prairie-bowl-iv,linked,0.92,alias,prairie-bowl-iv,Explicit URL/title/Winnipeg and 16 entries; retain with material seven-day stale Tourplay date warning
+10282,,not_found,0.98,negative,,No matching listing for NAF Championship Nottingham/date and no Tourplay URL
+10432,,not_found,0.99,negative,,Only weak unrelated candidates for Amorical Cup Novi/date and no Tourplay URL
+11370,,not_found,0.99,negative,,No Eucalyptus listing; weak candidate is unrelated England event
+10690,,not_found,0.98,negative,,No REVA or Chiva listing in date window and no Tourplay URL
+10453,the-home-nations-open-iii,linked,0.98,negative,,Exact title/date/Loughborough/team mode; runner-up is distinct Bowl event; registrations 273 vs entries 272

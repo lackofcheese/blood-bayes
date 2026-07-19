@@ -1,0 +1,21 @@
+naf_event_id,tourplay_slug,decision,confidence,evidence_summary
+10120,mulligans-open-2026-scotlands-naf-national,linked,0.99,Exact title/date/Glasgow; NAF BB2025 card; registrations 118 vs entries 117
+10644,hotpot-bowl-26,linked,0.99,Exact title/date/Preston; NAF BB2025 card; registrations and entries both 102
+9944,welsh-national-championship-2026,linked,0.99,Exact title/date/Cardiff; NAF BB2025 card; registrations 99 vs entries 98
+11105,scottish-team-championship-2026,linked,0.99,Exact title/date/Glasgow despite NAF city typo; team mode; registrations and entries both 80
+10887,harpastum-xvi,linked,0.99,Exact title/date and Florence-Firenze location; NAF BB2025 card; registrations and entries both 62
+10788,cierzo-bowl-2026,linked,0.97,Title alias and exact Zaragoza/date; BB2025; registrations and entries both 61; Tourplay NAF flag false
+11300,warsaw-tournament-xi,linked,0.99,Exact title/date/Warszawa; NAF BB2025 card; registrations and entries both 56
+11217,iii-takoyaki-bowl,linked,0.99,Exact title/date/La Roca del Valles; NAF BB2025 card; registrations 60 vs entries 53
+11431,pow-town-2026,linked,0.98,Exact title/date/Calgary; BB2025; registrations and entries both 52; Tourplay NAF flag false
+10824,tortellinobowl-iv,linked,0.99,Exact title/date/Modena; NAF BB2025 card; registrations and entries both 52
+11489,ii-craftbowl,linked,0.98,Exact title/date/Zaragoza; BB2025; registrations 52 vs entries 50; Tourplay NAF flag false
+10867,ii-cocollona-bowl-girona,linked,0.98,Exact title/date and Girona-Salt venue; NAF BB2025 card; registrations 52 vs entries 50
+11420,two-bosses,linked,0.99,Exact title/date/Tiana; team mode and NAF BB2025 card; registrations 52 vs entries 50
+10774,bleed-bowl-2026,linked,0.97,Normalized exact title/date and Cork-Blackrock location; NAF BB2025 card; registrations 48 vs entries 47
+10952,carrot-crunch-8,linked,0.98,Exact title/date/Kesgrave; NAF BB2025 card; registrations 48 vs entries 46
+10380,ukbbl-tabletop-xxii,linked,0.97,Expanded title and exact Nottingham/date; NAF BB2025 card; registrations and entries both 47
+11738,fajans-cup-4---druzynowe-mistrzostwa-polski,linked,0.99,Exact title/date/Poland; team mode and NAF BB2025 card; registrations and entries both 42
+11094,legendary-leagues-ii---the-jolly-jouster-cup,linked,0.99,Article-only title difference and exact location/date; registrations and entries both 42
+10820,block-tackle-pow--here-come-the-drums,linked,0.95,Exact distinctive title and Officer-Pakenham location; AU UTC boundary; registrations and entries both 42
+11315,chti-bowl-x,linked,0.99,Exact title/date/Pecquencourt; NAF BB2025 card; registrations 42 vs entries 41

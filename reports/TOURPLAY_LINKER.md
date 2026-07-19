@@ -40,9 +40,9 @@ slugs are BB2025, NAF-marked, and match the NAF events' 2026 dates. Exact embedd
 are strong evidence, but not infallible ground truth.
 The validation is therefore promising but not yet a precision certificate.
 
-The first pass proposes 165 review candidates among the 585 previously unlinked events:
-83 have at least 25 playing coaches, 28 at least 40, and 11 at least 60. Together they
-cover 10,430 NAF matches across 26 countries.
+The first pass proposes 166 review candidates among the 585 previously unlinked events:
+84 have at least 25 playing coaches, 28 at least 40, and 11 at least 60. Together they
+cover 10,472 NAF matches across 26 countries.
 The generated report preserves scores, margins, known-seed ranks, and rejected/ambiguous
 rows so thresholds can be audited rather than silently tuned.
 
@@ -60,6 +60,30 @@ is evidence that agents are useful for the ambiguity/review tail, not justificat
 spawning one per all 585 events. Pagination plus deterministic scoring should handle the
 bulk; Luna review should concentrate on high-value near-ties, aliases, and date conflicts.
 
+## Thirty-case validation and first fetch wave
+
+A frozen 30-case review used one Luna task per example: 10 strong candidates, 10
+threshold/near-tie candidates, five alias or conflict controls, and five apparent
+negatives. The decisions are preserved in `data/curated/tourplay_link_review.csv`.
+
+- All 20 proposed strong/threshold candidates were confirmed linked.
+- All five controls resolved correctly: two stale BB2020 embedded links were replaced
+  by current BB2025 pages; two explicit links were retained over listing aliases or
+  stale dates; one exact page absent from pagination was retained from cached evidence.
+- Four apparent negatives were confirmed not found.
+- The fifth negative, Home Nations Open III, was a strict-margin false negative and was
+  confirmed from exact metadata, team mode, and 273 versus 272 registrations.
+
+This is a deliberately stratified, reviewer-visible sample rather than a blinded random
+precision estimate. It demonstrates high yield and exposes threshold failure modes; it
+does not justify automatic promotion of all 166 candidates.
+
+The accepted events with at least 40 playing coaches formed an 11-request detail wave.
+All 11 returned HTTP 200 and are cached. Every payload contains tiers, race mapping,
+improvement packs, stacking, and star configuration; nine contain explicit skill costs.
+Six expose legal pack choice sets and five a single pack per tier. Canonical event IDs
+and coverage fields are recorded in `data/curated/tourplay_reviewed_details.csv`.
+
 ## Scaling recommendation
 
 1. Freeze listing-page checksums and candidate thresholds.
@@ -72,3 +96,7 @@ bulk; Luna review should concentrate on high-value near-ties, aliases, and date 
 
 The agent-per-example extreme remains a useful quality benchmark. It is not the cheapest
 primary recovery method now that six list requests expose the whole date window.
+
+Wave two subsequently froze and reviewed 20 additional events with at least 40 coaches.
+All 20 were accepted and fetched successfully. Its predeclared outcome summaries and
+stopping recommendation are reported separately in `WAVE2_RESULTS.md`.
