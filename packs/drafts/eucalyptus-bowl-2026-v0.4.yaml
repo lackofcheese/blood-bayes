@@ -1,0 +1,193 @@
+schema_version: 0
+annotation_status: draft
+pack_id: eucalyptus-bowl-2026-v0_4
+name: Eucalyptus Bowl 2026 Player Pack v0.4
+rules_edition: BB2025
+
+sources:
+  - source_id: eucalyptus_pdf
+    kind: organizer_document
+    authority: normative
+    sha256: b5d273dc9c8adaf337aeaf8e07e130bea3f355220e4219be6449771bebf69b40
+    url: https://www.thenaf.net/tournament_files/11370/Euc%20Bowl%202026%20Player%20Pack%200.4%20%281%29.pdf
+    version: "0.4"
+    retrieved_on: 2026-07-13
+  - source_id: eucalyptus_roster_manifest
+    kind: roster_builder_manifest
+    authority: derived_transcription
+    sha256: 72cdced1ada5f4e355a5cfbe66b63e0ecd731e0e7a29198fb983d3ba951ea4da
+    repository: https://github.com/PeterKlimk/roster-builder
+    repository_commit: 5d650dc
+    artifact_path: data/rules-packs/eucalyptus-bowl-2026-v0.4.yaml
+    derived_from: [eucalyptus_pdf]
+  - source_id: eucalyptus_roster_format
+    kind: roster_builder_format
+    authority: derived_transcription
+    sha256: f62ed81357169d60282c90168282fbe829fe7143e74cb1f7a6f8c857a8693666
+    repository: https://github.com/PeterKlimk/roster-builder
+    repository_commit: 5d650dc
+    artifact_path: data/formats/eucalyptus-bowl-2026-v0.4.yaml
+    derived_from: [eucalyptus_pdf]
+    notes: Executable format is validation evidence, not the canonical statistical record.
+
+evidence:
+  - evidence_id: eucalyptus_identity
+    source_id: eucalyptus_roster_manifest
+    extraction_method: roster_builder_import
+    locator: top-level identity and source
+    structured_reference: id, name, rulesEdition, and pinned organizer source
+  - evidence_id: eucalyptus_roster_rules
+    source_id: eucalyptus_roster_manifest
+    extraction_method: roster_builder_import
+    locator: sourceModel and supported clauses
+    structured_reference: sharedGold, advancement costs/caps, Elite caps, Stars, and inducements
+  - evidence_id: eucalyptus_executable_crosscheck
+    source_id: eucalyptus_roster_format
+    extraction_method: roster_builder_import
+    locator: tables, sets, values, construction, and constraints
+    structured_reference: 31 race rows and executable roster-legality policy
+  - evidence_id: eucalyptus_non_roster_gap
+    source_id: eucalyptus_roster_manifest
+    extraction_method: roster_builder_import
+    locator: clauses.tournament-play
+    quote: Scoring, tie-breaks, match timing, prizes, and administration are outside single-roster construction.
+    notes: This derived summary is a review queue, not proof of the omitted values.
+
+field_reviews:
+  legal_races: &eucalyptus_roster_review
+    status: unreviewed
+    evidence_ids: [eucalyptus_roster_rules, eucalyptus_executable_crosscheck]
+  race_groups: *eucalyptus_roster_review
+  groups.all: *eucalyptus_roster_review
+  global_rules.games: &eucalyptus_gap_review
+    status: unreviewed
+    evidence_ids: [eucalyptus_non_roster_gap]
+  global_rules.progression: *eucalyptus_gap_review
+  global_rules.scoring: *eucalyptus_gap_review
+  global_rules.event_structure: *eucalyptus_gap_review
+  other_rules: *eucalyptus_gap_review
+
+clause_coverage:
+  status: not_started
+  normative_source_id: eucalyptus_pdf
+  notes: Human must re-open the full PDF; the roster-builder manifest omits page locators for tournament play.
+
+legal_races:
+  - amazon
+  - black_orc
+  - bretonnian
+  - chaos_chosen
+  - chaos_dwarf
+  - chaos_renegades
+  - dark_elf
+  - dwarf
+  - elven_union
+  - gnome
+  - goblin
+  - halfling
+  - high_elf
+  - human
+  - imperial_nobility
+  - khorne
+  - lizardmen
+  - necromantic_horror
+  - norse
+  - nurgle
+  - ogre
+  - old_world_alliance
+  - orc
+  - shambling_undead
+  - skaven
+  - slann
+  - snotling
+  - tomb_kings
+  - underworld_denizens
+  - vampire
+  - wood_elf
+
+race_groups:
+  amazon: all
+  black_orc: all
+  bretonnian: all
+  chaos_chosen: all
+  chaos_dwarf: all
+  chaos_renegades: all
+  dark_elf: all
+  dwarf: all
+  elven_union: all
+  gnome: all
+  goblin: all
+  halfling: all
+  high_elf: all
+  human: all
+  imperial_nobility: all
+  khorne: all
+  lizardmen: all
+  necromantic_horror: all
+  norse: all
+  nurgle: all
+  ogre: all
+  old_world_alliance: all
+  orc: all
+  shambling_undead: all
+  skaven: all
+  slann: all
+  snotling: all
+  tomb_kings: all
+  underworld_denizens: all
+  vampire: all
+  wood_elf: all
+
+groups:
+  all:
+    label: All legal races
+    team_gold: 1250000
+    skill_funding:
+      mode: shared_team_gold
+      unit: gold
+    skill_rules:
+      primary_cost: 20000
+      elite_primary_cost: 30000
+      elite_skills: [block, dodge, guard, mighty_blow]
+      max_added_skills_per_player: 1
+      per_skill_caps: {block: 4, dodge: 4, guard: 4, mighty_blow: 4}
+      secondary_allowed: false
+      characteristic_improvements_allowed: false
+    stars:
+      policy: banned
+      max_count: 0
+    inducements:
+      policy: restricted
+      allowed_ids:
+        - temp_agency_cheerleaders
+        - team_mascot
+        - weather_mage
+        - blitzers_best_kegs
+        - bribe
+        - wandering_apothecary
+        - halfling_master_chef
+        - biased_referee
+        - infamous_coaching_staff
+        - wizard
+        - plague_doctor
+        - riotous_rookies
+        - mortuary_assistant
+        - custom:canopic_jar
+        - custom:bretonnian_pastries
+        - custom:bretonnian_damsel
+      overrides:
+        - {inducement_id: "custom:canopic_jar", cost: 50000, max_count: 1}
+        - {inducement_id: "custom:bretonnian_pastries", cost: 15000, max_count: 1}
+        - {inducement_id: "custom:bretonnian_damsel", cost: 150000, max_count: 1}
+
+global_rules:
+  games: null
+  progression: null
+  scoring: null
+  event_structure: null
+
+other_rules:
+  - rule_id: tournament_play_recovery
+    source_clause_id: tournament-play
+    summary: Scoring, tie-breaks, match timing, prizes, and administration require a whole-PDF review.
+    materiality: needs_review

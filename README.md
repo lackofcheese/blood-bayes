@@ -48,6 +48,7 @@ the repository root:
 .venv/bin/bb-stats-tier-power \
   data/derived/naf data/derived/tourplay data/derived/tourplay_resolved \
   reports/generated/tier_power
+.venv/bin/bb-stats-pack-lint packs/drafts/*.yaml
 ```
 
 The event catalogue is a discovery and connectivity report. Source hints are not
@@ -95,3 +96,9 @@ source. Its rules-pack manifests can seed draft annotations, but roster-validato
 coverage is not statistical pack completeness: non-roster rules and human field-level
 review remain mandatory. The assessed crosswalk and import boundary are documented in
 `reports/ROSTER_BUILDER_CROSSWALK.md`.
+
+Pack schema v0 lives in `src/bb_stats/packs.py`, with its annotation guide and trial
+records under `packs/`. The Eucalyptus and EuroBowl trials are intentionally
+`unreviewed`: lint warnings are the human-review queue, not errors to suppress. A pack
+cannot declare itself `model_ready` until every required block has normative evidence,
+named human confirmation, and a completed whole-document clause sweep.

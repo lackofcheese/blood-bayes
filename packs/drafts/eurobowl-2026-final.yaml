@@ -1,0 +1,303 @@
+schema_version: 0
+annotation_status: draft
+pack_id: eurobowl-2026-final
+name: EuroBowl 2026 Living Ruleset — FINAL
+rules_edition: BB2025
+
+sources:
+  - source_id: eurobowl_final_image
+    kind: organizer_document
+    authority: normative
+    sha256: d87342a1c88e4137bc774f15c7d2922fb6e6723598933f5c86cf0598bc897d84
+    url: https://81ccd0e8d4.clvaw-cdnwnd.com/5c60ea6ad06557d471522410634695d3/200000050-a23e1a23e2/rules%20final.png?ph=81ccd0e8d4
+    version: FINAL
+    retrieved_on: 2026-07-14
+    notes: Living source; every upstream revision requires a new digest and review.
+  - source_id: eurobowl_roster_manifest
+    kind: roster_builder_manifest
+    authority: derived_transcription
+    sha256: 7772311f83553fb3a8f3983f3c5c9c747c66f661abf17a5f69dac3a077726626
+    repository: https://github.com/PeterKlimk/roster-builder
+    repository_commit: 5d650dc
+    artifact_path: data/rules-packs/eurobowl-2026-final.yaml
+    derived_from: [eurobowl_final_image]
+  - source_id: eurobowl_roster_format
+    kind: roster_builder_format
+    authority: derived_transcription
+    sha256: f25f3be8477c4e65856f3bd85fae5362e3b3ffccc6370cc93e7f8dc34c9505ec
+    repository: https://github.com/PeterKlimk/roster-builder
+    repository_commit: 5d650dc
+    artifact_path: data/formats/eurobowl-2026-final.yaml
+    derived_from: [eurobowl_final_image]
+    notes: Executable format is validation evidence, not the canonical statistical record.
+
+evidence:
+  - evidence_id: eurobowl_identity
+    source_id: eurobowl_roster_manifest
+    extraction_method: roster_builder_import
+    locator: top-level identity and source
+    structured_reference: id, name, rulesEdition, and pinned FINAL organizer image
+  - evidence_id: eurobowl_roster_rules
+    source_id: eurobowl_roster_manifest
+    extraction_method: roster_builder_import
+    locator: sourceModel and supported clauses
+    structured_reference: tiers, funds, packages, caps, inducements, and Star rules
+  - evidence_id: eurobowl_executable_crosscheck
+    source_id: eurobowl_roster_format
+    extraction_method: roster_builder_import
+    locator: tables, construction, grants, and constraints
+    structured_reference: 31 race rows and executable roster-legality policy
+  - evidence_id: eurobowl_non_roster_gap
+    source_id: eurobowl_roster_manifest
+    extraction_method: roster_builder_import
+    locator: clauses.tournament-squad-and-play
+    quote: Squad composition, match procedure, scoring, and resurrection administration are outside single-roster construction.
+    notes: This derived summary is a review queue, not proof of the omitted values.
+
+field_reviews:
+  legal_races: &eurobowl_roster_review
+    status: unreviewed
+    evidence_ids: [eurobowl_roster_rules, eurobowl_executable_crosscheck]
+  race_groups: *eurobowl_roster_review
+  groups.tier_1: *eurobowl_roster_review
+  groups.tier_2: *eurobowl_roster_review
+  groups.tier_3: *eurobowl_roster_review
+  groups.tier_4: *eurobowl_roster_review
+  groups.tier_5: *eurobowl_roster_review
+  groups.tier_6: *eurobowl_roster_review
+  groups.tier_7: *eurobowl_roster_review
+  global_rules.games: &eurobowl_gap_review
+    status: unreviewed
+    evidence_ids: [eurobowl_non_roster_gap]
+  global_rules.progression: *eurobowl_gap_review
+  global_rules.scoring: *eurobowl_gap_review
+  global_rules.event_structure: *eurobowl_gap_review
+  other_rules: *eurobowl_gap_review
+
+clause_coverage:
+  status: not_started
+  normative_source_id: eurobowl_final_image
+  notes: Human must review the FINAL image and its authoritative surrounding documents for squad and play rules.
+
+legal_races:
+  - amazon
+  - black_orc
+  - bretonnian
+  - chaos_chosen
+  - chaos_dwarf
+  - chaos_renegades
+  - dark_elf
+  - dwarf
+  - elven_union
+  - gnome
+  - goblin
+  - halfling
+  - high_elf
+  - human
+  - imperial_nobility
+  - khorne
+  - lizardmen
+  - necromantic_horror
+  - norse
+  - nurgle
+  - ogre
+  - old_world_alliance
+  - orc
+  - shambling_undead
+  - skaven
+  - slann
+  - snotling
+  - tomb_kings
+  - underworld_denizens
+  - vampire
+  - wood_elf
+
+race_groups:
+  old_world_alliance: tier_1
+  orc: tier_1
+  wood_elf: tier_1
+  amazon: tier_2
+  skaven: tier_2
+  underworld_denizens: tier_2
+  dark_elf: tier_3
+  high_elf: tier_3
+  human: tier_3
+  lizardmen: tier_3
+  shambling_undead: tier_3
+  vampire: tier_3
+  necromantic_horror: tier_4
+  norse: tier_4
+  nurgle: tier_4
+  slann: tier_4
+  tomb_kings: tier_4
+  chaos_chosen: tier_5
+  chaos_dwarf: tier_5
+  dwarf: tier_5
+  elven_union: tier_5
+  imperial_nobility: tier_5
+  snotling: tier_5
+  black_orc: tier_6
+  bretonnian: tier_6
+  chaos_renegades: tier_6
+  gnome: tier_6
+  goblin: tier_6
+  halfling: tier_6
+  khorne: tier_6
+  ogre: tier_7
+
+groups:
+  tier_1:
+    label: Tier 1
+    team_gold: 1070000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 120000
+      flowing_funds: {amount: 10000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: &eurobowl_skill_rules
+      elite_skills: [block, dodge, guard, mighty_blow]
+      packages:
+        - {package_id: primary_non_elite, cost: 20000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: primary, elite: false}]}
+        - {package_id: primary_elite, cost: 30000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: primary, elite: true}]}
+        - {package_id: secondary_non_elite, cost: 40000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: secondary, elite: false}]}
+        - {package_id: secondary_elite, cost: 50000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: secondary, elite: true}]}
+        - {package_id: stack_non_elite, cost: 50000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: primary, elite: false}, {access: primary, elite: false}]}
+        - {package_id: stack_mixed, cost: 60000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: primary, elite: true}, {access: primary, elite: false}]}
+        - {package_id: stack_elite, cost: 70000, cost_unit: gold, cost_resource: skill_funding, slots: [{access: primary, elite: true}, {access: primary, elite: true}]}
+      max_packages_per_player: 1
+      max_added_skills_per_player: 2
+      secondary_skill_cap: 3
+      stacked_player_cap: 3
+      secondary_allowed: true
+      characteristic_improvements_allowed: false
+    stars: &eurobowl_no_stars
+      policy: banned
+      max_count: 0
+    inducements: &eurobowl_inducements
+      policy: restricted
+      allowed_ids: [biased_referee, blitzers_best_kegs, bribe, halfling_master_chef, mortuary_assistant, plague_doctor, riotous_rookies, team_mascot, wandering_apothecary, weather_mage]
+  tier_2:
+    label: Tier 2
+    team_gold: 1070000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 140000
+      flowing_funds: {amount: 20000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: *eurobowl_no_stars
+    inducements: *eurobowl_inducements
+  tier_3:
+    label: Tier 3
+    team_gold: 1080000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 160000
+      flowing_funds: {amount: 30000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: *eurobowl_no_stars
+    inducements: *eurobowl_inducements
+  tier_4:
+    label: Tier 4
+    team_gold: 1100000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 190000
+      flowing_funds: {amount: 30000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: *eurobowl_no_stars
+    inducements: *eurobowl_inducements
+  tier_5:
+    label: Tier 5
+    team_gold: 1120000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 220000
+      flowing_funds: {amount: 30000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: &eurobowl_tier5_stars
+      policy: restricted
+      max_count: 2
+      classes:
+        - class_id: veteran
+          maximum: 2
+          star_ids: &eurobowl_veterans
+            [akhorne_the_squirrel, barik_farblast, bilerot_vomitflesh, eldril_sidewinder,
+             fungus_the_loon, glart_smashrip, gloriel_summerbloom, grashnak_blackhoof,
+             grim_ironjaw, grombrindal, guffle_pusmaw, helmut_wulf, josef_bugman,
+             karla_von_kill, kiroth_krakeneye, max_spleenripper, nobbla_blackwart,
+             puggy_baconbreath, rashnak_backstabber, rodney_roachbait, rowana_forestfoot,
+             rumbelow_sheepskin, scrappa_sorehead, scyla_anfingrimm, skrull_halfheight,
+             swiftvine_glimmershard, the_black_gobbo, the_mighty_zug, thorsson_stoutmead,
+             varag_ghoul_chewer, willow_rosebark, withergrasp_doubledrool, zzharg_madeye]
+          fee: 50000
+          fee_unit: gold
+          fee_resource: skill_funding
+        - class_id: legend
+          maximum: 1
+          star_ids: &eurobowl_legends
+            [deeproot_strongbranch, grak_and_crumbleberry, ivar_eriksson,
+             kreek_rustgouger, lord_borak_the_despoiler, the_swift_twins,
+             maple_highgrove, ripper_bolgrot, skitter_stab_stab, skrorg_snowpelt,
+             zolcath_the_zoat]
+          fee: 100000
+          fee_unit: gold
+          fee_resource: skill_funding
+      banned_star_ids: &eurobowl_banned_stars
+        [bomber_dribblesnot, cindy_piewhistle, dribl_and_drull, estelle_la_veneaux,
+         griff_oberwald, hthark_the_unstoppable, hakflem_skuttlespike,
+         ivan_the_animal_deathshroud, jeremiah_kool, jordell_freshbreeze,
+         morg_n_thorg, roxanna_darknail]
+      unavailable_star_ids: &eurobowl_unavailable_stars
+        [anqi_panqi, boa_konssstriktr, captain_karina_von_riesz,
+         count_luthor_von_drakenborg, glotl_stop, gretchen_wachter, wilhelm_chaney]
+      advancement_tags_banned_when_used: [secondary, stack]
+      combination_notes: [A Legend cannot be combined with a Veteran.]
+    inducements: *eurobowl_inducements
+  tier_6:
+    label: Tier 6
+    team_gold: 1140000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 240000
+      flowing_funds: {amount: 40000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: &eurobowl_tier67_stars
+      policy: restricted
+      max_count: 2
+      classes:
+        - {class_id: veteran, maximum: 2, star_ids: *eurobowl_veterans, fee: 40000, fee_unit: gold, fee_resource: skill_funding}
+        - {class_id: legend, maximum: 1, star_ids: *eurobowl_legends, fee: 80000, fee_unit: gold, fee_resource: skill_funding}
+      banned_star_ids: *eurobowl_banned_stars
+      unavailable_star_ids: *eurobowl_unavailable_stars
+      advancement_tags_banned_when_used: [secondary, stack]
+      combination_notes: [A Legend cannot be combined with a Veteran.]
+    inducements: *eurobowl_inducements
+  tier_7:
+    label: Tier 7
+    team_gold: 1150000
+    skill_funding:
+      mode: package_budget
+      unit: gold
+      amount: 270000
+      flowing_funds: {amount: 50000, step: 10000, destinations: [team_gold, skill_funding]}
+    skill_rules: *eurobowl_skill_rules
+    stars: *eurobowl_tier67_stars
+    inducements: *eurobowl_inducements
+
+global_rules:
+  games: null
+  progression: null
+  scoring: null
+  event_structure:
+    event_type: squad
+
+other_rules:
+  - rule_id: squad_and_tournament_play_recovery
+    source_clause_id: tournament-squad-and-play
+    summary: Squad composition, match procedure, scoring, and resurrection administration require review beyond the FINAL roster sheet.
+    materiality: needs_review

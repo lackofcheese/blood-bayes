@@ -7,7 +7,10 @@ name = "bb-stats"
 version = "0.1.0"
 description = "Reproducible NAF tournament analysis and tournament-pack modelling"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+  "pydantic>=2.11,<3",
+  "PyYAML>=6.0,<7",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -27,6 +30,7 @@ bb-stats-exploratory-signal = "bb_stats.analysis.exploratory_signal:main"
 bb-stats-tier-signal = "bb_stats.analysis.tier_signal:main"
 bb-stats-tier-power = "bb_stats.analysis.tier_power:main"
 bb-stats-tourplay-linker = "bb_stats.analysis.tourplay_linker:main"
+bb-stats-pack-lint = "bb_stats.packs:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/bb_stats"]
