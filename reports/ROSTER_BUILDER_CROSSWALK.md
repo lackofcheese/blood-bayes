@@ -1,9 +1,9 @@
 # Roster-builder rules-pack crosswalk
 
 Assessment date: 2026-07-20. The inspected source is the sibling
-`../roster-builder` checkout at commit `3bdaa2f`, including its then-uncommitted
-rules-pack work. Treat the inventory as a provisional snapshot until that checkout is
-committed; imports must record a manifest digest rather than rely on this assessment date.
+`../roster-builder` checkout at commit `5d650dc`; the rules-pack and authoring work
+observed during assessment is committed in that history. Imports must still record the
+individual manifest digest rather than rely on a mutable checkout or assessment date.
 
 ## Decision
 
