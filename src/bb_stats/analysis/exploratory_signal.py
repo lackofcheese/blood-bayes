@@ -332,6 +332,9 @@ def raw_feature_probe(
     events = sorted({str(cell["event_id"]) for cell in usable}, key=int)
     squared_model: dict[str, list[float]] = defaultdict(list)
     squared_base: dict[str, list[float]] = defaultdict(list)
+    weighted_squared_model: dict[str, list[float]] = defaultdict(list)
+    weighted_squared_base: dict[str, list[float]] = defaultdict(list)
+    held_out_weights: Counter[str] = Counter()
     coefficients: list[list[float]] = []
     for held_out in events:
         training_cells = [cell for cell in usable if str(cell["event_id"]) != held_out]
@@ -387,8 +390,14 @@ def raw_feature_probe(
                 value * coefficient for value, coefficient in zip(x, beta, strict=True)
             )
             prediction = baseline + adjustment
-            squared_base[held_out].append((target - baseline) ** 2)
-            squared_model[held_out].append((target - prediction) ** 2)
+            base_error = (target - baseline) ** 2
+            model_error = (target - prediction) ** 2
+            weight = int(cell["games"])
+            squared_base[held_out].append(base_error)
+            squared_model[held_out].append(model_error)
+            weighted_squared_base[held_out].append(weight * base_error)
+            weighted_squared_model[held_out].append(weight * model_error)
+            held_out_weights[held_out] += weight
     deltas = {
         event: sum(squared_base[event]) / len(squared_base[event])
         - sum(squared_model[event]) / len(squared_model[event])
@@ -396,10 +405,16 @@ def raw_feature_probe(
         if squared_model[event]
     }
     mean_beta = [sum(values) / len(values) for values in zip(*coefficients, strict=True)]
+    total_weight = sum(held_out_weights[event] for event in deltas)
+    match_weighted_improvement = (
+        sum(sum(weighted_squared_base[event]) for event in deltas)
+        - sum(sum(weighted_squared_model[event]) for event in deltas)
+    ) / total_weight
     return {
         "usable_cell_count": len(usable),
         "held_out_event_count": len(deltas),
         "equal_event_mean_mse_improvement": sum(deltas.values()) / len(deltas),
+        "match_weighted_mse_improvement": match_weighted_improvement,
         "events_improved": sum(value > 0 for value in deltas.values()),
         "event_deltas": deltas,
         "features": list(feature_names),

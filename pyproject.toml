@@ -29,6 +29,7 @@ bb-stats-tourplay-resolve = "bb_stats.analysis.tourplay_resolved:main"
 bb-stats-exploratory-signal = "bb_stats.analysis.exploratory_signal:main"
 bb-stats-tier-signal = "bb_stats.analysis.tier_signal:main"
 bb-stats-tier-power = "bb_stats.analysis.tier_power:main"
+bb-stats-pack-signal = "bb_stats.analysis.pack_signal:main"
 bb-stats-tourplay-linker = "bb_stats.analysis.tourplay_linker:main"
 bb-stats-pack-lint = "bb_stats.packs:main"
 

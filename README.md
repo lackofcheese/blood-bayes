@@ -48,6 +48,9 @@ the repository root:
 .venv/bin/bb-stats-tier-power \
   data/derived/naf data/derived/tourplay data/derived/tourplay_resolved \
   reports/generated/tier_power
+.venv/bin/bb-stats-pack-signal \
+  data/derived/naf data/derived/tourplay_wave2 data/derived/tourplay_resolved_wave2 \
+  reports/generated/pack_signal
 .venv/bin/bb-stats-pack-lint packs/drafts/*.yaml
 ```
 
@@ -86,6 +89,11 @@ The tier-power command adds a conditional three-category W/D/L simulation. It ho
 cross-fitted nuisance predictions fixed, so its detection probabilities are deliberately
 described as optimistic and are not the final gate power rehearsal.
 
+The pack-signal command is a frozen, non-binding pipeline rehearsal over schema-inspired
+legal-option envelopes in the reviewed wave-two corpus. It does not use the two future trial
+packs as outcome observations, infer realized roster choices, or bypass their deferred human
+review gate.
+
 Reviewed inferred Tourplay links live in `data/curated/tourplay_link_review.csv`; fetched
 canonical IDs and structural coverage for the first bounded detail wave live in
 `data/curated/tourplay_reviewed_details.csv`. Candidate links never enter those files
@@ -102,3 +110,6 @@ records under `packs/`. The Eucalyptus and EuroBowl trials are intentionally
 `unreviewed`: lint warnings are the human-review queue, not errors to suppress. A pack
 cannot declare itself `model_ready` until every required block has normative evidence,
 named human confirmation, and a completed whole-document clause sweep.
+
+Human review is currently deferred—not waived—during preliminary testing. The explicit
+promotion gate and unresolved queue live in `packs/DEFERRED_REVIEWS.md`.
