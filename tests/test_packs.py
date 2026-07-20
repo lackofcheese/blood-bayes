@@ -39,7 +39,7 @@ def test_eucalyptus_trial_has_exact_race_group_coverage() -> None:
     assert pack.groups["all"].skill_funding.mode.value == "shared_team_gold"
 
 
-def test_eurobowl_trial_preserves_tiers_packages_and_squad_signal() -> None:
+def test_eurobowl_trial_preserves_tiers_packages_and_tournament_gap() -> None:
     pack = load_pack(DRAFTS / "eurobowl-2026-final.yaml")
     assert len(pack.legal_races) == 31
     assert len(pack.groups) == 7
@@ -48,8 +48,7 @@ def test_eurobowl_trial_preserves_tiers_packages_and_squad_signal() -> None:
     assert pack.groups["tier_6"].stars.classes[1].fee == 80_000
     assert pack.groups["tier_6"].stars.classes[1].fee_resource == "skill_funding"
     assert len(pack.groups["tier_6"].stars.classes[0].star_ids) == 33
-    assert pack.global_rules.event_structure is not None
-    assert pack.global_rules.event_structure.event_type.value == "squad"
+    assert pack.global_rules.event_structure is None
 
 
 def test_schema_rejects_unknown_fields_and_incomplete_race_mapping() -> None:
@@ -93,7 +92,9 @@ def test_model_ready_requires_complete_global_rules_and_every_confirmation() -> 
         "scoring": {"win_points": 3, "draw_points": 1, "loss_points": 0},
         "event_structure": {"event_type": "open", "scoring_level": "individual"},
     }
-    raw["other_rules"][0]["materiality"] = "not_modelled"
+    for rule in raw["other_rules"]:
+        if rule["materiality"] == "needs_review":
+            rule["materiality"] = "not_modelled"
     raw["evidence"].append(
         {
             "evidence_id": "human_pdf_review",

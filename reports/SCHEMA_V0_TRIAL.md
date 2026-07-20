@@ -37,10 +37,11 @@ and executable-format facts at commit `5d650dc`:
 - Star Players banned; and
 - the executable inducement allow-list, retained as derived cross-check evidence.
 
-Human review remains required for every block. The highest-priority missing facts are
-games count, resurrection/progression, W/D/L and bonus scoring, event structure, and the
-source clauses summarized upstream only as “tournament play.” The upstream manifest has
-no page locator for that grouped omission, so the reviewer must sweep the whole PDF.
+Two independent AI sweeps added direct PDF locators, six games, 80/40/10 scoring and ordered
+tiebreakers, plus granular non-roster clauses. Human review remains required for every block.
+Progression and event structure remain null because the PDF does not state them; the reviewer
+must not infer resurrection or open/individual structure from the fixed roster and coach-level
+language.
 
 ## EuroBowl trial
 
@@ -54,19 +55,21 @@ no page locator for that grouped omission, so the reviewer must sweep the whole 
 - banned/unavailable Star lists and advancement restrictions; and
 - the ten-entry inducement allow-list.
 
-The record identifies the event as squad-structured, but that value remains unreviewed.
-The FINAL roster image does not by itself recover the complete games, resurrection,
-scoring, squad-size, uniqueness, pairing, or match-procedure rules. Human review must
-identify and pin the authoritative surrounding documents rather than fill those fields
-from community knowledge.
+Two independent visual sweeps added direct locators for the tier, funds, advancement,
+inducement, and Star panels. The FINAL roster image does not by itself establish event type,
+games, resurrection, scoring, squad size, uniqueness, pairing, or match procedure, so those
+fields remain null. The official page shows six rounds but could not be cached as a verified
+artifact and still carries stale v0.2 prose. Human review must identify and pin authoritative
+surrounding documents rather than fill those fields from community knowledge.
 
 ## Verification result
 
-Both YAML records parse and pass structural/semantic lint with no errors. Their lint
-output consists only of expected `unreviewed` warnings: eight required review blocks for
-Eucalyptus and fourteen for EuroBowl. Tests seed unknown keys, missing race mappings,
-unknown race IDs, incoherent scoring, incomplete model readiness, and non-normative event
-patches; each fails as intended.
+Both YAML records parse and pass structural/semantic lint with no errors. Their lint output
+consists only of expected `unreviewed` warnings: eight required review blocks for Eucalyptus
+and fourteen for EuroBowl. The reconciled AI findings are recorded in
+`reports/AI_PACK_PREREVIEW.md`. Tests seed unknown keys, missing race mappings, unknown race
+IDs, incoherent scoring, incomplete model readiness, and non-normative event patches; each
+fails as intended.
 
 ## Human handoff and freeze gate
 

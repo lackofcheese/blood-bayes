@@ -85,6 +85,8 @@ class ExtractionMethod(StrEnum):
     ROSTER_BUILDER_IMPORT = "roster_builder_import"
     TOURPLAY_IMPORT = "tourplay_import"
     LLM_PDF = "llm_pdf"
+    LLM_VISUAL = "llm_visual"
+    LLM_WEB = "llm_web"
 
 
 class ReviewStatus(StrEnum):

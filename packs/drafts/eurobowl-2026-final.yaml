@@ -32,6 +32,39 @@ sources:
     notes: Executable format is validation evidence, not the canonical statistical record.
 
 evidence:
+  - evidence_id: eurobowl_final_tiers
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: 1357x1920 image, tier matrix at approximately x=25-1330, y=130-465
+    structured_reference: Complete 31-team tier assignment and tier-specific Team Budget, Skill Gold, and Flowing Funds rows.
+    notes: Monetary values are displayed in thousands; multiplication to Gold pieces is a high-confidence normalization, not a printed unit declaration.
+  - evidence_id: eurobowl_final_general
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: 1357x1920 image, General Rules and Flowing Funds at approximately x=7-1005, y=480-576
+    structured_reference: Stalling applies; BB2025 NAF recommendations should be used; Flowing Funds can be divided between Team Budget and Skill Gold in any way.
+  - evidence_id: eurobowl_final_advancements
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: 1357x1920 image, Advancing Players at approximately x=430-1005, y=585-1060
+    structured_reference: Seven priced advancement packages, one package per player, team caps on players with Secondary and Stack packages, and no Primary, Elite, or repeat limits.
+  - evidence_id: eurobowl_final_inducements
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: 1357x1920 image, Allowed Inducements at approximately x=1015-1345, y=480-970
+    structured_reference: Ten named allowed inducement categories, including the Dodgy League Rep subtype.
+  - evidence_id: eurobowl_final_stars
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: 1357x1920 image, Star Players, Banned, Playable Veterans, and Legends at approximately x=255-1100, y=1070-1675
+    structured_reference: Minimum 11 players after hiring Stars; tier access and Skill Gold fees; Team Budget pays ordinary fees; advancement restriction; playable and banned printed lists.
+    notes: Catalog ID expansion, unavailable-list complements, and the printed Scrooge Sorehead normalization remain derived interpretations.
+  - evidence_id: eurobowl_final_tournament_gaps
+    source_id: eurobowl_final_image
+    extraction_method: llm_visual
+    locator: complete 1357x1920 FINAL image
+    structured_reference: The image contains roster construction and general-rule panels but no games, progression, scoring, squad-size, pairing, or matchup procedure.
+    notes: Absence found by AI is a review finding, not proof of tournament-play values.
   - evidence_id: eurobowl_identity
     source_id: eurobowl_roster_manifest
     extraction_method: roster_builder_import
@@ -57,7 +90,7 @@ evidence:
 field_reviews:
   legal_races: &eurobowl_roster_review
     status: unreviewed
-    evidence_ids: [eurobowl_roster_rules, eurobowl_executable_crosscheck]
+    evidence_ids: [eurobowl_final_tiers, eurobowl_final_general, eurobowl_final_advancements, eurobowl_final_inducements, eurobowl_final_stars, eurobowl_roster_rules, eurobowl_executable_crosscheck]
   race_groups: *eurobowl_roster_review
   groups.tier_1: *eurobowl_roster_review
   groups.tier_2: *eurobowl_roster_review
@@ -68,16 +101,18 @@ field_reviews:
   groups.tier_7: *eurobowl_roster_review
   global_rules.games: &eurobowl_gap_review
     status: unreviewed
-    evidence_ids: [eurobowl_non_roster_gap]
+    evidence_ids: [eurobowl_final_tournament_gaps, eurobowl_non_roster_gap]
   global_rules.progression: *eurobowl_gap_review
   global_rules.scoring: *eurobowl_gap_review
   global_rules.event_structure: *eurobowl_gap_review
-  other_rules: *eurobowl_gap_review
+  other_rules:
+    status: unreviewed
+    evidence_ids: [eurobowl_final_general, eurobowl_final_stars, eurobowl_final_tournament_gaps, eurobowl_non_roster_gap]
 
 clause_coverage:
   status: not_started
   normative_source_id: eurobowl_final_image
-  notes: Human must review the FINAL image and its authoritative surrounding documents for squad and play rules.
+  notes: Two independent AI visual reviews were reconciled on 2026-07-20. Human must review the FINAL image and locate and pin authoritative surrounding documents for squad and play rules.
 
 legal_races:
   - amazon
@@ -176,6 +211,7 @@ groups:
     inducements: &eurobowl_inducements
       policy: restricted
       allowed_ids: [biased_referee, blitzers_best_kegs, bribe, halfling_master_chef, mortuary_assistant, plague_doctor, riotous_rookies, team_mascot, wandering_apothecary, weather_mage]
+      notes: [The printed Biased Referee subtype is Dodgy League Rep.]
   tier_2:
     label: Tier 2
     team_gold: 1070000
@@ -293,11 +329,46 @@ global_rules:
   games: null
   progression: null
   scoring: null
-  event_structure:
-    event_type: squad
+  event_structure: null
 
 other_rules:
+  - rule_id: stalling_and_naf_clarifications
+    source_clause_id: general-rules
+    summary: Stalling applies under the rulebook and the organizer says BB2025 NAF recommendations and clarifications should be used; the mutable external material is not pinned here.
+    materiality: needs_review
+  - rule_id: flowing_funds_granularity
+    source_clause_id: flowing-funds
+    summary: The image permits dividing Flowing Funds in any way but does not explicitly establish the draft's 10k allocation step.
+    materiality: needs_review
+  - rule_id: elite_skill_definition
+    source_clause_id: advancing-players
+    summary: The image uses Elite as a class without naming its member skills; the four-skill list comes from external or derived evidence.
+    materiality: needs_review
+  - rule_id: advancement_menu_closure
+    source_clause_id: advancing-players
+    summary: Characteristic improvements are absent from the closed-looking advancement menu but are not separately stated to be banned.
+    materiality: needs_review
+  - rule_id: minimum_players_after_stars
+    source_clause_id: star-players
+    summary: A team must have at least 11 players after hiring Star Players; schema v0 has no roster-size constraint.
+    materiality: not_modelled
+  - rule_id: star_budget_and_normalization
+    source_clause_id: star-players
+    summary: Ordinary Star fees use Team Budget; several printed names require catalog mapping, including the unreviewed Scrooge Sorehead to Scrappa Sorehead correction.
+    materiality: needs_review
+  - rule_id: unavailable_star_complement
+    source_clause_id: star-players
+    summary: Stars recorded as unavailable rather than explicitly banned are an inferred complement against an external base catalog.
+    materiality: needs_review
   - rule_id: squad_and_tournament_play_recovery
     source_clause_id: tournament-squad-and-play
-    summary: Squad composition, match procedure, scoring, and resurrection administration require review beyond the FINAL roster sheet.
+    summary: Current progression, scoring, squad size, uniqueness, pairing, matchup, and match procedures require a separately pinned authoritative source.
     materiality: needs_review
+  - rule_id: surrounding_page_version_conflict
+    source_clause_id: source-versioning
+    summary: The official page still describes version 0.2 while embedding the organizer-hosted sheet labelled FINAL.
+    materiality: needs_review
+  - rule_id: data_gathering_hashtag
+    source_clause_id: general-rules
+    summary: Coaches are encouraged to use the event hashtag in tournament descriptions for data gathering.
+    materiality: admin_only

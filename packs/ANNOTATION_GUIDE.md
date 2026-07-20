@@ -29,6 +29,22 @@ Only `confirmed` counts toward model readiness. A model-ready annotation also re
 dated whole-document clause sweep. Agent review, upstream `runnable` status, executable tests,
 and agreement between two derived sources are useful checks but are not human confirmation.
 
+### Optional AI pre-review
+
+AI can prepare the human review queue, but cannot approve it:
+
+1. Pin and checksum the complete normative artifact before extraction.
+2. Give the same artifact and current draft to two independent agents. Require page or visual
+   locators and a whole-document sweep, including rules outside roster construction.
+3. Reconcile their reports. Transcribe facts only when the normative artifact states them;
+   preserve disagreements and unsupported inferences as explicit review findings.
+4. Record direct AI evidence as `llm_pdf`, `llm_visual`, or `llm_web`, as appropriate. A web
+   fact must not enter the pack merely from an unpinned search result or blocked cache.
+5. Keep affected fields `unreviewed`, the annotation `draft`, and human clause coverage
+   incomplete. Agent names do not populate the human reviewer fields.
+6. Hand the reconciled locators, ambiguities, and schema gaps to a human, who re-opens every
+   normative source and remains responsible for confirmation and the final clause sweep.
+
 The required schema-v0 review paths are:
 
 - `legal_races` and `race_groups`;

@@ -31,6 +31,38 @@ sources:
     notes: Executable format is validation evidence, not the canonical statistical record.
 
 evidence:
+  - evidence_id: eucalyptus_pdf_roster_rules
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: PDF pages 3-4, Team Creation and inducement lists
+    structured_reference: No tiers; 1.25m shared Gold; advancement prices and caps; minimum 11 players; no Stars, Secondary skills, or characteristic improvements; named allowed and banned inducements.
+    notes: Independent AI reviewers agreed on the transcription; catalog ID normalization and external prices remain for human review.
+  - evidence_id: eucalyptus_pdf_games
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: PDF page 2, Saturday and Sunday schedule
+    structured_reference: Games 1-3 are scheduled Saturday and Games 4-6 Sunday.
+  - evidence_id: eucalyptus_pdf_scoring
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: PDF pages 5 and 15, Points, Tiebreaks, and round examples
+    structured_reference: Win/draw/loss score 80/40/10; five ordered tiebreakers; source-defined Median Opponents Score calculation drops the highest and lowest opponent averages when applicable.
+  - evidence_id: eucalyptus_pdf_event_signals
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: PDF pages 5, 8, 10-11, and 15
+    structured_reference: Results, opponent scores, prizes, and reporting are coach-level, but the document never labels the event open, team, or squad and gives no pairing method.
+  - evidence_id: eucalyptus_pdf_progression_gap
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: whole-document AI sweep, PDF pages 1-17
+    structured_reference: No explicit resurrection, recovery, retained-injury, SPP, or between-game progression clause was found.
+    notes: Absence found by AI is a review finding, not proof of a progression mode.
+  - evidence_id: eucalyptus_pdf_other_rules
+    source_id: eucalyptus_pdf
+    extraction_method: llm_pdf
+    locator: PDF pages 3, 5-6, and 8-14
+    structured_reference: Minimum roster, discarded Gold, incorporated rules, awards, painting penalty, result administration, clocks, slow-play sanctions, local play conventions, default result, conduct, and removal.
   - evidence_id: eucalyptus_identity
     source_id: eucalyptus_roster_manifest
     extraction_method: roster_builder_import
@@ -56,21 +88,29 @@ evidence:
 field_reviews:
   legal_races: &eucalyptus_roster_review
     status: unreviewed
-    evidence_ids: [eucalyptus_roster_rules, eucalyptus_executable_crosscheck]
+    evidence_ids: [eucalyptus_pdf_roster_rules, eucalyptus_roster_rules, eucalyptus_executable_crosscheck]
   race_groups: *eucalyptus_roster_review
   groups.all: *eucalyptus_roster_review
-  global_rules.games: &eucalyptus_gap_review
+  global_rules.games:
     status: unreviewed
-    evidence_ids: [eucalyptus_non_roster_gap]
-  global_rules.progression: *eucalyptus_gap_review
-  global_rules.scoring: *eucalyptus_gap_review
-  global_rules.event_structure: *eucalyptus_gap_review
-  other_rules: *eucalyptus_gap_review
+    evidence_ids: [eucalyptus_pdf_games, eucalyptus_non_roster_gap]
+  global_rules.progression:
+    status: unreviewed
+    evidence_ids: [eucalyptus_pdf_progression_gap, eucalyptus_non_roster_gap]
+  global_rules.scoring:
+    status: unreviewed
+    evidence_ids: [eucalyptus_pdf_scoring, eucalyptus_non_roster_gap]
+  global_rules.event_structure:
+    status: unreviewed
+    evidence_ids: [eucalyptus_pdf_event_signals, eucalyptus_non_roster_gap]
+  other_rules:
+    status: unreviewed
+    evidence_ids: [eucalyptus_pdf_other_rules, eucalyptus_non_roster_gap]
 
 clause_coverage:
   status: not_started
   normative_source_id: eucalyptus_pdf
-  notes: Human must re-open the full PDF; the roster-builder manifest omits page locators for tournament play.
+  notes: Two independent AI whole-document sweeps were reconciled on 2026-07-20. Human must re-open the PDF, resolve the listed ambiguities, and perform the authoritative clause sweep.
 
 legal_races:
   - amazon
@@ -175,19 +215,77 @@ groups:
         - custom:canopic_jar
         - custom:bretonnian_pastries
         - custom:bretonnian_damsel
+      banned_ids: [prayers_to_nuffle, part_time_assistant_coaches, extra_team_training, mercenary_players]
       overrides:
         - {inducement_id: "custom:canopic_jar", cost: 50000, max_count: 1}
         - {inducement_id: "custom:bretonnian_pastries", cost: 15000, max_count: 1}
         - {inducement_id: "custom:bretonnian_damsel", cost: 150000, max_count: 1}
+      notes:
+        - The PDF names Josef Bugman, Sports Wizard, and Dodgy League Rep variants; generic catalog IDs may be over-broad.
+        - The PDF prints Plaque Doctor; plague_doctor is an unreviewed apparent-typo normalization.
+        - Custom inducement costs and caps come from derived catalog evidence, not values printed in this PDF.
 
 global_rules:
-  games: null
+  games: 6
   progression: null
-  scoring: null
+  scoring:
+    win_points: 80
+    draw_points: 40
+    loss_points: 10
+    tiebreakers:
+      - source-defined Median Opponents Score
+      - touchdown differential
+      - touchdowns total
+      - casualty differential
+      - casualties total
   event_structure: null
 
 other_rules:
-  - rule_id: tournament_play_recovery
-    source_clause_id: tournament-play
-    summary: Scoring, tie-breaks, match timing, prizes, and administration require a whole-PDF review.
+  - rule_id: minimum_roster_size
+    source_clause_id: team-creation
+    summary: A team must begin with at least 11 players; schema v0 has no roster-size constraint.
+    materiality: not_modelled
+  - rule_id: unspent_construction_gold
+    source_clause_id: team-creation
+    summary: Unspent construction Gold is discarded and cannot be retained for later use.
+    materiality: not_modelled
+  - rule_id: median_opponents_score
+    source_clause_id: scoring-and-tiebreaks
+    summary: The first tiebreak is a source-defined trimmed sum of opponent points-per-game, not a conventional statistical median.
+    materiality: not_modelled
+  - rule_id: incorporated_rules
+    source_clause_id: ruleset
+    summary: The pack incorporates BB2025, a linked FAQ, mutable NAF recommendations, and a printed Slann roster; the external versions are not all digest-pinned.
     materiality: needs_review
+  - rule_id: awards_and_prize_allocation
+    source_clause_id: prizes
+    summary: The pack defines ordered individual awards, painting voting, and Best-in-Race and prize-table allocation.
+    materiality: not_modelled
+  - rule_id: painting_penalty
+    source_clause_id: presentation
+    summary: Teams require minimum presentation standards and may receive a discretionary 10-point penalty for each game deemed insufficiently painted.
+    materiality: not_modelled
+  - rule_id: results_administration
+    source_clause_id: bbtm
+    summary: Both coaches submit touchdowns and casualties through BBTM; mismatches are resolved by the organizer.
+    materiality: admin_only
+  - rule_id: match_timing_and_clocks
+    source_clause_id: match-timing
+    summary: Games last 2h20; the pack defines dice-down authority, chess-clock triggers, expired-clock procedures, and slow-play sanctions.
+    materiality: not_modelled
+  - rule_id: local_match_conventions
+    source_clause_id: rules-queries
+    summary: Organizer rulings are final; the pack defines cocked dice, prone/stunned markers, take-backs, and moved-player facing conventions.
+    materiality: not_modelled
+  - rule_id: late_attendance_default
+    source_clause_id: attendance
+    summary: Late absence after an organizer-discretion grace period is a concession recorded as a 2-touchdown, 2-casualty victory.
+    materiality: not_modelled
+  - rule_id: conduct_and_removal
+    source_clause_id: conduct
+    summary: Conduct and responsible-drinking requirements apply, with removal from the event as a possible sanction.
+    materiality: admin_only
+  - rule_id: event_logistics
+    source_clause_id: administration
+    summary: Dates, venue, submission deadline, fees, equipment, attendance, merchandise, acknowledgements, and historical winners are administrative.
+    materiality: admin_only
