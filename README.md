@@ -92,7 +92,8 @@ described as optimistic and are not the final gate power rehearsal.
 The pack-signal command is a frozen, non-binding pipeline rehearsal over schema-inspired
 legal-option envelopes in the reviewed wave-two corpus. It does not use the two future trial
 packs as outcome observations, infer realized roster choices, or bypass their deferred human
-review gate.
+review gate. The frozen protocol and result are documented in `reports/PACK_SIGNAL_PROTOCOL.md`
+and `reports/PACK_SIGNAL.md`.
 
 Reviewed inferred Tourplay links live in `data/curated/tourplay_link_review.csv`; fetched
 canonical IDs and structural coverage for the first bounded detail wave live in
